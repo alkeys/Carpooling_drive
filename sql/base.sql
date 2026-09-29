@@ -101,6 +101,8 @@ CREATE TABLE vehiculos (
 
     foto_url TEXT,
 
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+
     creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
@@ -506,6 +508,9 @@ ON usuarios(estado);
 -- Vehículos
 CREATE INDEX idx_vehiculos_propietario
 ON vehiculos(propietario_id);
+
+CREATE INDEX idx_vehiculos_activo
+ON vehiculos(activo);
 
 
 -- Viajes

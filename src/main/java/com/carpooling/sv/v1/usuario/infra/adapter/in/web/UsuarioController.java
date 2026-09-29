@@ -47,6 +47,7 @@ public class UsuarioController {
     private final UpdateUsuarioCase updateUsuarioCase;
     private final DeleteUsuarioCase deleteUsuarioCase;
     private final ChangeRolesCase changeRolesCase;
+    private final com.carpooling.sv.v1.shared.security.SecurityContextHelper securityHelper;
 
     public UsuarioController(
             CreateUsuarioCase createUsuarioCase,
@@ -54,13 +55,15 @@ public class UsuarioController {
             GetUsuarioByIdCase getUsuarioByIdCase,
             UpdateUsuarioCase updateUsuarioCase,
             DeleteUsuarioCase deleteUsuarioCase,
-            ChangeRolesCase changeRolesCase) {
+            ChangeRolesCase changeRolesCase,
+            com.carpooling.sv.v1.shared.security.SecurityContextHelper securityHelper) {
         this.createUsuarioCase = createUsuarioCase;
         this.getAllUsuariosCase = getAllUsuariosCase;
         this.getUsuarioByIdCase = getUsuarioByIdCase;
         this.updateUsuarioCase = updateUsuarioCase;
         this.deleteUsuarioCase = deleteUsuarioCase;
         this.changeRolesCase = changeRolesCase;
+        this.securityHelper = securityHelper;
     }
 
     @Operation(summary = "Registrar o crear un usuario", description = "Endpoint público para el registro de nuevos usuarios en el sistema")
@@ -75,6 +78,30 @@ public class UsuarioController {
         Usuario usuario = toDomainUsuario(usuarioRequest);
         Usuario nuevoUsuario = createUsuarioCase.createUsuario(usuario);
         return toUsuarioResponse(nuevoUsuario);
+    }
+
+    @Operation(summary = "Obtener perfil del usuario autenticado", description = "Obtiene los detalles del usuario actualmente logueado a través del token/sesión.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Perfil recuperado"),
+        @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    @GetMapping("/me")
+    public UsuarioResponse getMiPerfil() {
+        UUID currentUserId = securityHelper.getCurrentUserId();
+        return toUsuarioResponse(getUsuarioByIdCase.getUsuarioById(currentUserId));
+    }
+
+    @Operation(summary = "Actualizar perfil propio", description = "Permite modificar datos personales (nombre, teléfono, foto) del usuario autenticado.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Perfil actualizado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    @PutMapping("/me")
+    public UsuarioResponse updateMiPerfil(@Valid @RequestBody UsuarioUpdateRequest updateRequest) {
+        UUID currentUserId = securityHelper.getCurrentUserId();
+        Usuario usuarioActualizado = toDomainUsuario(currentUserId, updateRequest);
+        return toUsuarioResponse(updateUsuarioCase.updateUsuario(currentUserId, usuarioActualizado));
     }
 
     @Operation(summary = "Listar todos los usuarios", description = "Obtiene la lista completa de usuarios registrados. Requiere autenticación.")
@@ -100,10 +127,11 @@ public class UsuarioController {
         return toUsuarioResponse(getUsuarioByIdCase.getUsuarioById(id));
     }
 
-    @Operation(summary = "Actualizar usuario", description = "Permite modificar datos de perfil de un usuario existente. Requiere autenticación.")
+    @Operation(summary = "Actualizar usuario", description = "Permite modificar datos de perfil de un usuario existente. Solo el propio usuario o ADMIN.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Usuario actualizado exitosamente"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado (No eres el propietario)"),
         @ApiResponse(responseCode = "404", description = "Usuario no encontrado"),
         @ApiResponse(responseCode = "409", description = "Conflicto con teléfono u otros datos únicos"),
         @ApiResponse(responseCode = "401", description = "No autenticado")
@@ -112,6 +140,10 @@ public class UsuarioController {
     public UsuarioResponse updateUsuario(
             @PathVariable UUID id,
             @Valid @RequestBody UsuarioUpdateRequest updateRequest) {
+        UUID currentUserId = securityHelper.getCurrentUserId();
+        if (!id.equals(currentUserId) && !securityHelper.isAdmin()) {
+            throw new com.carpooling.sv.v1.shared.exception.ForbiddenException("No tienes permiso para modificar los datos de otro usuario");
+        }
         Usuario usuarioActualizado = toDomainUsuario(id, updateRequest);
         return toUsuarioResponse(updateUsuarioCase.updateUsuario(id, usuarioActualizado));
     }
@@ -144,6 +176,10 @@ public class UsuarioController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUsuario(@PathVariable UUID id) {
+        UUID currentUserId = securityHelper.getCurrentUserId();
+        if (!id.equals(currentUserId) && !securityHelper.isAdmin()) {
+            throw new com.carpooling.sv.v1.shared.exception.ForbiddenException("No tienes permiso para eliminar este usuario");
+        }
         deleteUsuarioCase.deleteUsuario(id);
     }
 

@@ -52,8 +52,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, SecurityEndpoints.PUBLIC_GET_URLS).permitAll()
                 // 3. Endpoints Públicos POST (Login, Logout, Registro de Usuarios)
                 .requestMatchers(HttpMethod.POST, SecurityEndpoints.PUBLIC_POST_URLS).permitAll()
-                // 4. Manejo de errores
+                // 4. Manejo de errores y handshake de WebSockets
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 // 5. Endpoints exclusivos para ADMIN
                 .requestMatchers(SecurityEndpoints.ADMIN_URLS).hasRole("ADMIN")
                 // 6. Endpoints para CONDUCTOR

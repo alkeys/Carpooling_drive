@@ -1,6 +1,6 @@
 # 🚗 RUTEA - Plataforma de Carpooling El Salvador (API v1)
 
-> **Plataforma inteligente de viajes compartidos (Carpooling) diseñada para conectar conductores y pasajeros, optimizando la movilidad urbana, reduciendo costos de transporte y disminuyendo el tráfico vehicular en El Salvador.**
+> **Plataforma inteligente de viajes compartidos (Carpooling) diseñada para conectar conductores y pasajeros, optimizando la movilidad urbana, reduciendo costos de transporte y disminuyendo el tráfico vehicular en El Salvador y Centroamérica.**
 
 ---
 
@@ -14,31 +14,33 @@ En El Salvador y la región centroamericana, miles de personas se desplazan diar
 - Huella de carbono innecesaria provocada por miles de autos circulando con un solo ocupante.
 
 ### La Solución y Visión: Rutea
-**Rutea** nace con la misión de transformar la movilidad diaria mediante un modelo colaborativo, eficiente, seguro y accesible:
+**Rutea** transforma la movilidad diaria mediante un modelo colaborativo, eficiente, seguro y accesible:
 - **Optimización de cupos**: Permitir que conductores que ya realizan una ruta diaria moneticen sus asientos vacíos compartiendo gastos.
-- **Viajes económicos y cómodos**: Brindar a estudiantes y trabajadores una alternativa directa, económica y segura frente a los métodos de transporte convencionales.
-- **Geolocalización precisa**: Aprovechar capacidades geoespaciales avanzadas (PostGIS) para definir orígenes, destinos y puntos de encuentro intermedios reales en la ruta.
-- **Seguridad y confianza comunitaria**: Construir una red confiable basada en perfiles verificados, calificaciones bidireccionales y comunicación directa en tiempo real.
+- **Viajes económicos y cómodos**: Brindar a estudiantes y trabajadores una alternativa directa, económica y segura.
+- **Geolocalización precisa**: Aprovechar capacidades geoespaciales avanzadas (**PostGIS**) para definir orígenes, destinos y puntos de encuentro intermedios reales en la ruta con radio de proximidad geodésico (`ST_DWithin`).
+- **Seguridad y confianza comunitaria**: Construir una red confiable basada en perfiles verificados, calificaciones bidireccionales post-viaje y comunicación directa en tiempo real mediante WebSockets.
 
 ---
 
 ## 🏗️ 2. Arquitectura de Software
 
-El núcleo del backend está construido siguiendo los principios de **Arquitectura Hexagonal (Ports & Adapters)** combinada con **Vertical Slice Architecture**, garantizando alta cohesión, bajo acoplamiento y facilidad de mantenimiento y testing:
+El backend está construido bajo el paradigma de **Monolito Modular** combinando **Arquitectura Hexagonal (Puertos y Adaptadores)** y **Vertical Slice Architecture**:
 
 ```
 src/main/java/com/carpooling/sv/v1/
-├── auth/                                # Slice de Autenticación
-│   ├── application/                     # Casos de uso (Login, Update) y Puertos
-│   └── infra/                           # Adaptadores HTTP (REST), JWT, Cookies
-├── usuario/                             # Slice de Gestión de Usuarios
-│   ├── domain/                          # Entidades y Value Objects puros
-│   ├── application/                     # Casos de uso CRUD, Roles y Puertos In/Out
-│   └── infra/                           # Adaptadores JPA, PostgreSQL y Controladores
+├── auth/                                # Slice: Autenticación, JWT y Sesión
+├── usuario/                             # Slice: Gestión de Usuarios, Perfil /me y Roles
+├── vehiculo/                            # Slice: Vehículos, Placas únicas y Baja Lógica
+├── ruta/                                # Slice: Catálogo maestro de rutas interurbanas
+├── viaje/                               # Slice: Publicación, Ciclo de vida y Búsqueda PostGIS
+├── solicitud/                           # Slice: Reserva atómica de cupos y cancelaciones
+├── mensajeria/                          # Slice: Chat grupal por viaje y WebSockets STOMP
+├── calificacion/                        # Slice: Reseñas mutuas y reputación pública
 └── shared/                              # Componentes transversales
-    ├── config/                          # OpenAPI/Swagger, DataInitializer
-    ├── exception/                       # Manejador global de excepciones (RFC 7807)
-    └── security/                        # Filtro JWT, Cookies HttpOnly, Spring Security
+    ├── config/                          # Swagger OpenAPI, Jackson JSR-310
+    ├── exception/                       # Manejador Global (RFC 7807) y Excepciones
+    ├── security/                        # Filtro JWT, Cookies HttpOnly, SecurityContextHelper
+    └── websocket/                       # WebSocketConfig, STOMP y Auth Interceptor
 ```
 
 ---
@@ -47,116 +49,165 @@ src/main/java/com/carpooling/sv/v1/
 
 | Capa / Herramienta | Tecnología | Detalle |
 | :--- | :--- | :--- |
-| **Lenguaje** | **Java 25** | Uso de records, pattern matching y características modernas del JDK |
-| **Framework** | **Spring Boot 4.1.1** | Núcleo del API REST, inyección de dependencias y configuración |
+| **Lenguaje** | **Java 25** | Uso intensivo de records inmutables, pattern matching y Virtual Threads |
+| **Framework** | **Spring Boot 4.1.1** | Núcleo del API REST, inyección de dependencias y configuración reactiva |
 | **Seguridad** | **Spring Security + JWT** | Autenticación híbrida: Cookies `HttpOnly` (Web) y Bearer Header (Móvil) |
-| **Base de Datos** | **PostgreSQL 18 + PostGIS 3.6** | Persistencia relacional con soporte de datos y consultas geoespaciales |
-| **ORM / Migraciones** | **Spring Data JPA + Flyway** | Acceso a datos de alto rendimiento y control de versiones del esquema |
-| **Tiempo Real** | **Spring WebSocket + STOMP** | Soporte de mensajería y actualizaciones de viaje en vivo |
+| **Base de Datos** | **PostgreSQL 18 + PostGIS 3.6** | Persistencia relacional con índices espaciales GIST y funciones geoespaciales |
+| **ORM / Migraciones** | **Spring Data JPA + Flyway** | Hibernate 7, repositorios desacoplados y control de versiones del esquema |
+| **Tiempo Real** | **Spring WebSocket + STOMP** | Broker de mensajería en tiempo real con autenticación JWT en frames `CONNECT` |
 | **Documentación** | **SpringDoc OpenAPI 3 (Swagger)** | Documentación interactiva en `/swagger-ui.html` |
-| **Infraestructura Local** | **Docker Compose** | Contenedor de base de datos con PostGIS preconfigurado |
+| **Infraestructura Local** | **Docker Compose** | Contenedor de PostgreSQL 18 con PostGIS preconfigurado |
 
 ---
 
-## 📊 4. Estado Actual: Lo Que Tenemos Implementado
+## 📊 4. Módulos y Funcionalidades del Sistema
 
-Actualmente, la versión base (**v1**) cuenta con los cimientos de infraestructura, seguridad y administración de usuarios:
+### 1. Autenticación y Usuarios (`auth` & `usuario`)
+- Autenticación híbrida: Cookie `HttpOnly` (`access_token`) y Header `Authorization: Bearer`.
+- Endpoints de conveniencia: `GET /api/v1/usuarios/me` y `PUT /api/v1/usuarios/me` para evitar IDOR.
+- Gestión de roles (`ADMIN`, `CONDUCTOR`, `CLIENTE`, `USUARIO`) y estados de cuenta.
 
-- [x] **Infraestructura con Docker Compose**: Contenedor `postgis/postgis:18-3.6` listo con base de datos `rutea`.
-- [x] **Seguridad Robusta de Doble Factor de Transporte**:
-  - Tokens JWT con firma HMAC-SHA256 (`jjwt-api 0.12.6`).
-  - Almacenamiento seguro en **Cookies `HttpOnly`** (`access_token`, `SameSite=Lax`) para prevenir robo por XSS.
-  - Compatibilidad nativa con cabecera `Authorization: Bearer <token>` para clientes móviles y herramientas como Swagger/Postman.
-- [x] **Inicialización Automática de Datos (`DataInitializer`)**:
-  - Creación y mantenimiento automático del superusuario administrador (`admin@admin.com`).
-- [x] **Módulo de Autenticación (`/api/v1/auth`)**:
-  - `POST /login`: Autenticación con generación de token y cookie de sesión.
-  - `POST /logout`: Invalidación y eliminación de la cookie de sesión.
-  - `POST /register`: Registro público de nuevos usuarios.
-  - `GET /me`: Consulta del perfil autenticado actual.
-  - `POST /me/update`: Actualización de datos personales del perfil autenticado.
-- [x] **Módulo de Usuarios (`/api/v1/usuarios`)**:
-  - CRUD completo de usuarios con DTOs validados (`Jakarta Validation`).
-  - Gestión de roles de acceso (`ADMIN`, `CONDUCTOR`, `CLIENTE`, `USUARIO`).
-  - Control de estados de usuario (`ACTIVO`, `SUSPENDIDO`, `INACTIVO`).
-- [x] **Mapeo del Modelo de Datos Relacional y Geoespacial (`sql/base.sql`)**:
-  - Esquema completo diseñado para vehículos, rutas, viajes, puntos de encuentro, solicitudes, chat y calificaciones.
-- [x] **Manejo Centralizado de Errores**:
-  - `GlobalExceptionHandler` con respuestas estandarizadas para recursos duplicados, no encontrados, validaciones fallidas y accesos no autorizados.
+### 2. Vehículos (`vehiculo`)
+- Registro de vehículos con validación de placa única en el sistema.
+- **Baja lógica (`activo = false`):** Los autos no se eliminan físicamente para mantener la integridad de viajes y calificaciones pasadas.
+- **Protección Anti-IDOR:** Solo el propietario del vehículo o administradores pueden modificarlo o darlo de baja.
+
+### 3. Rutas Predefinidas (`ruta`)
+- Catálogo de trayectos interurbanos frecuentes en El Salvador.
+- Consulta pública para visitantes (`GET /api/v1/rutas`).
+- Mantenimiento y activación restringido a administradores (`ROLE_ADMIN`).
+
+### 4. Viajes y Geolocalización PostGIS (`viaje`)
+- **Publicación:** Validación cruzada mediante `VehiculoVerificationPort` para asegurar que el auto pertenece al conductor y está activo.
+- **Búsqueda Geoespacial en Radio:** Filtra viajes activos evaluando coordenadas de origen y destino en metros mediante `ST_DWithin` geodésico sobre `geometry(Point, 4326)`.
+- **Paradas Intermedias:** Registro de puntos de encuentro intermedios en la ruta.
+- **Ciclo de Vida:** Control de estados `PUBLICADO` ➔ `COMPLETO` ➔ `EN_CURSO` ➔ `FINALIZADO` (o `CANCELADO`).
+
+### 5. Solicitudes y Reservas de Cupos (`solicitud`)
+- Solicitud de cupos (rechaza solicitudes a su propio viaje o duplicadas).
+- **Descuento Atómico de Cupos:** Al aceptar la solicitud, los cupos del viaje se decrementan de manera atómica dentro de una transacción.
+- **Restauración Automática de Cupos:** Al cancelar una solicitud aceptada, los cupos se reintegran al viaje automáticamente.
+
+### 6. Chat Grupal en Tiempo Real (`mensajeria` & `websocket`)
+- Sala de chat exclusiva por viaje. Solo pueden ingresar el conductor y pasajeros aceptados.
+- **WebSockets + STOMP:**
+  - Endpoint de conexión: `ws://localhost:8080/ws`
+  - Canal de suscripción en tiempo real: `/topic/conversaciones/{conversacionId}`
+  - Envío por socket: `/app/conversaciones/{conversacionId}/enviar`
+  - Envío por REST: `POST /api/v1/conversaciones/{id}/mensajes` (también transmite al socket en vivo).
+- Autenticación JWT en el frame `CONNECT` de STOMP mediante `WebSocketAuthInterceptor`.
+
+### 7. Calificaciones y Reputación (`calificacion`)
+- Reseñas mutuas obligatoriamente vinculadas a un viaje `FINALIZADO` o `EN_CURSO`.
+- Validación de participación mutua: solo usuarios que compartieron el viaje pueden calificarse.
+- Protección contra autocalificación y calificaciones duplicadas.
+- **Consulta Pública de Reputación (`GET /api/v1/calificaciones/usuario/{id}`):** Promedio de estrellas (1 a 5), total de opiniones y reseñas para consulta abierta de confiabilidad.
 
 ---
 
-## 🗺️ 5. Hoja de Ruta (Roadmap hacia el Producto Completo)
+## 🛡️ 5. Matriz de Endpoints y Seguridad
 
-```mermaid
-flowchart LR
-    A["Fase 1: Usuarios & Auth<br>(Completada)"] --> B["Fase 2: Vehículos & Rutas"]
-    B --> C["Fase 3: Viajes & PostGIS"]
-    C --> D["Fase 4: Solicitudes & Reservas"]
-    D --> E["Fase 5: Chat WebSocket & Calificaciones"]
+| Método | Endpoint | Rol Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/login` | Público | Inicio de sesión (retorna Cookie y JSON) |
+| `POST` | `/api/v1/auth/register` | Público | Registro de usuarios |
+| `POST` | `/api/v1/auth/logout` | Público | Cierre de sesión e invalidación de Cookie |
+| `GET` | `/api/v1/usuarios/me` | Autenticado | Perfil propio |
+| `PUT` | `/api/v1/usuarios/me` | Autenticado | Actualización de perfil propio |
+| `GET` | `/api/v1/rutas` | Público | Catálogo de rutas frecuentes |
+| `POST` | `/api/v1/rutas` | `ROLE_ADMIN` | Crear nueva ruta maestra |
+| `POST` | `/api/v1/vehiculos` | `CONDUCTOR` | Registrar vehículo |
+| `GET` | `/api/v1/vehiculos/mis-vehiculos` | Autenticado | Listar mis vehículos |
+| `DELETE`| `/api/v1/vehiculos/{id}` | Conductor Propietario | Baja lógica del vehículo |
+| `GET` | `/api/v1/viajes/buscar` | Público | Búsqueda geoespacial PostGIS |
+| `GET` | `/api/v1/viajes/{id}` | Público | Detalle público del viaje |
+| `POST` | `/api/v1/viajes` | `CONDUCTOR` | Publicar nuevo viaje |
+| `PATCH` | `/api/v1/viajes/{id}/estado` | Conductor del Viaje | Cambiar estado (EN_CURSO, FINALIZADO) |
+| `POST` | `/api/v1/viajes/{id}/puntos` | Conductor del Viaje | Añadir punto de encuentro |
+| `POST` | `/api/v1/solicitudes-viaje` | Autenticado | Solicitar reserva de cupo |
+| `GET` | `/api/v1/solicitudes-viaje/mis-solicitudes` | Autenticado | Ver mis solicitudes enviadas |
+| `GET` | `/api/v1/solicitudes-viaje/viaje/{id}` | Conductor del Viaje | Ver solicitudes recibidas |
+| `PATCH` | `/api/v1/solicitudes-viaje/{id}/responder` | Conductor del Viaje | Aceptar o rechazar reserva |
+| `PUT` | `/api/v1/solicitudes-viaje/{id}/cancelar` | Pasajero / ADMIN | Cancelar reserva (restaura cupos) |
+| `GET` | `/api/v1/conversaciones/viaje/{id}` | Conductor/Pasajero | Abrir chat del viaje |
+| `GET` | `/api/v1/conversaciones/{id}/mensajes` | Participante | Historial de mensajes |
+| `POST` | `/api/v1/conversaciones/{id}/mensajes` | Participante | Enviar mensaje (difunde en vivo) |
+| `POST` | `/api/v1/calificaciones` | Participante del Viaje| Calificar tras viaje finalizado |
+| `GET` | `/api/v1/calificaciones/usuario/{id}` | Público | Reputación pública y promedio de estrellas |
+| `WS` | `/ws` | Handshake Público | Conexión WebSocket / STOMP (JWT en CONNECT) |
+
+---
+
+## 🔌 6. Ejemplo de Integración WebSocket (JavaScript)
+
+```javascript
+import { Client } from '@stomp/stompjs';
+
+// 1. Inicializar cliente STOMP
+const stompClient = new Client({
+  brokerURL: 'ws://localhost:8080/ws',
+  connectHeaders: {
+    Authorization: 'Bearer ' + jwtAccessToken
+  },
+  reconnectDelay: 5000
+});
+
+// 2. Al conectar, suscribirse al canal del viaje
+stompClient.onConnect = frame => {
+  console.log('Conectado a STOMP:', frame);
+
+  stompClient.subscribe('/topic/conversaciones/' + conversacionId, message => {
+    const payload = JSON.parse(message.body);
+    console.log('Mensaje recibido en vivo:', payload);
+  });
+};
+
+stompClient.activate();
+
+// 3. Enviar mensaje por WebSocket
+function enviarMensaje(texto) {
+  stompClient.publish({
+    destination: '/app/conversaciones/' + conversacionId + '/enviar',
+    body: JSON.stringify({ contenido: texto })
+  });
+}
 ```
 
-### Próximos Módulos a Desarrollar:
-1. **Módulo de Vehículos (`vehiculos`)**:
-   - Registro de automóviles de conductores (marca, modelo, año, placa, capacidad de pasajeros y fotografía).
-2. **Módulo de Rutas y Puntos de Encuentro (`rutas` & `puntos_encuentro`)**:
-   - Gestión de rutas maestras y paradas clave con coordenadas geográficas (`GEOGRAPHY(POINT, 4326)`).
-3. **Módulo de Publicación y Búsqueda de Viajes (`viajes`)**:
-   - Publicación de viajes con cupos disponibles, fecha, hora y tarifa calculada.
-   - Búsqueda geoespacial por radio de proximidad (PostGIS `ST_DWithin` / `ST_Distance`).
-4. **Módulo de Solicitudes y Reservas (`solicitudes_viaje`)**:
-   - Flujo de reserva de cupos: Solicitud del pasajero $\rightarrow$ Aprobación/Rechazo del conductor $\rightarrow$ Actualización de cupos.
-5. **Chat en Tiempo Real (`conversaciones` & `mensajes`)**:
-   - Salas de chat para los ocupantes de cada viaje activo mediante WebSockets.
-6. **Sistema de Calificaciones y Reputación (`calificaciones`)**:
-   - Reseñas de 1 a 5 estrellas entre pasajeros y conductores tras finalizar el viaje.
-
 ---
 
-## 🚀 6. Guía de Inicio Rápido (Desarrollo Local)
+## 🚀 7. Guía de Inicio Rápido
 
 ### Requisitos Previos
-- **JDK 25** instalado y configurado en el `PATH`.
+- **JDK 25** instalado.
 - **Docker** y **Docker Compose** en ejecución.
 
-### 1. Iniciar la Base de Datos
-Levanta el contenedor de PostgreSQL con PostGIS:
+### 1. Iniciar la Base de Datos PostGIS
 ```bash
 docker compose up -d
 ```
 
-### 2. Estructura de la Base de Datos
-Aplica el script de base de datos inicial:
-```bash
-psql -h localhost -U rutea -d rutea -f sql/base.sql
-# Contraseña por defecto: rutea_dev
-```
-
-### 3. Compilar y Ejecutar el Backend
+### 2. Ejecutar la Aplicación
+Flyway aplicará automáticamente las migraciones del esquema al iniciar:
 ```bash
 ./gradlew bootRun
 ```
 
-La aplicación se iniciará en el puerto `8080` (o el configurado en `application.properties`).
+### 3. Ejecutar la Suite de Pruebas Automatizadas (62 Tests)
+```bash
+./gradlew test
+```
 
-### 4. Acceder a la Documentación Interactiva
-Abre en tu navegador:
+### 4. Swagger UI Interactiva
 ```
 http://localhost:8080/swagger-ui.html
 ```
 
-### 5. Credenciales por Defecto
-El sistema cuenta con un usuario Administrador precargado para pruebas:
+### Credenciales de Administrador por Defecto:
 - **Correo**: `admin@admin.com`
 - **Contraseña**: `admin`
 
 ---
 
-## 🔒 7. Licencia y Derechos de Autor
-
-Este proyecto y su código fuente son de carácter **privado, propietario y confidencial**. Todos los derechos están estrictamente reservados por su autor.
-
-Para más detalles sobre los términos legales y prohibición de copia o distribución a terceros, consulta el archivo [LICENSE](file:///home/alex/apis/v1/LICENSE).
-
----
-Desarrollado con dedicación por **Alexander Avilés ([@alkeys](https://github.com/alkeys))**.
+## 🔒 8. Licencia
+Este proyecto y su código fuente son de carácter **privado, propietario y confidencial**. Todos los derechos reservados.
+Consulta el archivo [LICENSE](file:///home/alex/apis/v1/LICENSE) para más detalles.

@@ -35,7 +35,13 @@ public final class SecurityEndpoints {
         "/swagger-ui.html",
         "/v3/api-docs/**",
         "/actuator/health",
-        "/actuator/info"
+        "/actuator/info",
+        "/api/v1/rutas",
+        "/api/v1/rutas/*",
+        "/api/v1/viajes/buscar",
+        "/api/v1/viajes/*",
+        "/api/v1/calificaciones/usuario/**",
+        "/ws/**"
     };
 
     // =========================================================================
@@ -54,7 +60,8 @@ public final class SecurityEndpoints {
     public static final String[] ADMIN_URLS = {
         "/api/v1/admin/**",
         "/api/v1/usuarios/*/roles",      // Modificación de roles
-        "/api/v1/usuarios/*/estado"       // Suspensión o activación de cuentas
+        "/api/v1/usuarios/*/estado",     // Suspensión o activación de cuentas
+        "/api/v1/rutas/todas"            // Listado administrativo de todas las rutas
     };
 
     // =========================================================================
@@ -63,17 +70,15 @@ public final class SecurityEndpoints {
     public static final String[] CONDUCTOR_URLS = {
         "/api/v1/conductor/**",
         "/api/v1/vehiculos/**",
+        "/api/v1/viajes/mis-viajes",
         "/api/v1/viajes/publicar",
         "/api/v1/viajes/mis-publicaciones/**"
     };
 
-    // =========================================================================
-    // 6. ENDPOINTS PARA CLIENTES / PASAJEROS (ROLE_CLIENTE o ROLE_ADMIN)
-    // =========================================================================
     public static final String[] CLIENTE_URLS = {
-        "/api/v1/cliente/**",
-        "/api/v1/solicitudes-viaje/**"
+        "/api/v1/cliente/**"
     };
+
 
     // =========================================================================
     // Métodos utilitarios de consulta
