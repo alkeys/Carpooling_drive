@@ -1,0 +1,1081 @@
+---
+// mis-viajes.astro - Gestión de Viajes Publicados y Confirmación de Selección para Conductores
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import AuthModal from '../components/AuthModal.astro';
+---
+
+<Layout 
+  title="Mis Viajes Publicados | Rutea El Salvador"
+  description="Administra los viajes que has publicado como conductor, gestiona solicitudes de pasajeros y confirma cupos en tiempo real."
+>
+  <Navbar />
+
+  <main class="my-trips-page">
+    <div class="container">
+      
+      <!-- Encabezado Principal -->
+      <header class="page-header">
+        <div class="header-intro">
+          <div class="header-badge-row">
+            <span class="badge badge-sand">🚗 Módulo de Conductor</span>
+            <span class="status-live-chip">En Vivo</span>
+          </div>
+          <h1 class="page-title">Mis Viajes Publicados</h1>
+          <p class="page-subtitle">
+            Supervisa tus rutas activas, revisa los cupos disponibles y <strong>confirma la selección de pasajeros</strong> que solicitan viajar contigo.
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <a href="/publicar" class="btn btn-primary btn-sm">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <span>+ Publicar Nuevo Viaje</span>
+          </a>
+          <a href="/viajes-seleccionados" class="btn btn-outline btn-sm">
+            <span>🎟️ Viajes Seleccionados (Pasajero)</span>
+          </a>
+          <a href="/mensajes" class="btn btn-ghost btn-sm">
+            <span>💬 Centro de Mensajes</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Auth Required Gate Banner -->
+      <section class="auth-gate-card glass-card" id="my-trips-auth-gate" style="display: none;">
+        <div class="gate-icon">🔒</div>
+        <div class="gate-content">
+          <h3>Inicia sesión para ver tus viajes</h3>
+          <p>Debes ingresar con tu cuenta para visualizar los viajes que has creado y gestionar las confirmaciones de pasajeros.</p>
+          <button type="button" class="btn btn-primary" id="btn-gate-open-login">
+            Iniciar Sesión
+          </button>
+        </div>
+      </section>
+
+      <!-- Dashboard de Mis Viajes (Autenticado) -->
+      <section class="trips-dashboard-section" id="my-trips-content">
+        <!-- Métricas Rápidas KPI -->
+        <div class="kpi-grid">
+          <div class="kpi-item glass-card">
+            <span class="kpi-icon">🚗</span>
+            <div class="kpi-meta">
+              <span class="kpi-label">Viajes Creados</span>
+              <strong class="kpi-num" id="kpi-total-trips">--</strong>
+            </div>
+          </div>
+          <div class="kpi-item glass-card">
+            <span class="kpi-icon">🟢</span>
+            <div class="kpi-meta">
+              <span class="kpi-label">Viajes Activos</span>
+              <strong class="kpi-num" id="kpi-active-trips">--</strong>
+            </div>
+          </div>
+          <div class="kpi-item glass-card">
+            <span class="kpi-icon">⚡</span>
+            <div class="kpi-meta">
+              <span class="kpi-label">Solicitudes Pendientes</span>
+              <strong class="kpi-num color-amber" id="kpi-pending-requests">--</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros de Pestaña -->
+        <div class="trips-filter-tabs">
+          <button type="button" class="tab-pill active" data-filter="all">Todos los Viajes</button>
+          <button type="button" class="tab-pill" data-filter="active">Publicados & En Curso</button>
+          <button type="button" class="tab-pill" data-filter="finished">Finalizados / Cancelados</button>
+          <div class="search-mini-wrap">
+            <input type="text" id="filter-trips-input" placeholder="Filtrar por ciudad o destino..." class="search-mini-input" />
+          </div>
+        </div>
+
+        <!-- Indicador de Carga -->
+        <div class="loading-state" id="trips-loading-indicator">
+          <div class="spinner-circle"></div>
+          <p>Cargando tus viajes publicados y solicitudes desde el servidor...</p>
+        </div>
+
+        <!-- Estado Vacío -->
+        <div class="empty-trips-card glass-card" id="trips-empty-card" style="display: none;">
+          <div class="empty-icon">🏖️</div>
+          <h3>Aún no has publicado viajes</h3>
+          <p>¿Vas hacia Surf City, Santa Ana o San Salvador y tienes asientos libres? Comparte tu viaje para dividir costos de combustible y viajar acompañado.</p>
+          <a href="/publicar" class="btn btn-primary">Publicar mi Primer Viaje</a>
+        </div>
+
+        <!-- Lista de Tarjetas de Viajes -->
+        <div class="trips-list-grid" id="my-trips-list-container">
+          <!-- Tarjetas renderizadas dinámicamente -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <AuthModal />
+</Layout>
+
+<style>
+  .my-trips-page {
+    padding: 2.5rem 0 5rem;
+    min-height: 85vh;
+    background: radial-gradient(circle at 10% 20%, rgba(143, 214, 200, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(11, 93, 103, 0.08) 0%, transparent 45%);
+  }
+
+  /* Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2.2rem;
+  }
+
+  .header-intro {
+    max-width: 680px;
+  }
+
+  .header-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .status-live-chip {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0F8A8B;
+    background: rgba(15, 138, 139, 0.12);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full);
+  }
+
+  .page-title {
+    font-size: 2.2rem;
+    font-family: var(--font-display);
+    color: var(--color-slate);
+    margin: 0 0 0.5rem;
+    line-height: 1.15;
+  }
+
+  .page-subtitle {
+    font-size: 1rem;
+    color: var(--color-slate-muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* Gate Card */
+  .auth-gate-card {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-radius: var(--radius-xl);
+    max-width: 580px;
+    margin: 3rem auto;
+  }
+
+  .gate-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .auth-gate-card h3 {
+    font-size: 1.4rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-gate-card p {
+    color: var(--color-slate-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-item {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: var(--radius-md);
+  }
+
+  .kpi-icon {
+    font-size: 2rem;
+  }
+
+  .kpi-meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kpi-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .kpi-num {
+    font-size: 1.7rem;
+    font-family: var(--font-display);
+    color: var(--color-primary);
+    line-height: 1.1;
+  }
+
+  .color-amber {
+    color: #D97706 !important;
+  }
+
+  /* Filter Tabs */
+  .trips-filter-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.8rem;
+    border-bottom: 1px solid rgba(143, 214, 200, 0.3);
+    padding-bottom: 1rem;
+  }
+
+  .tab-pill {
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--radius-full);
+    background: transparent;
+    border: 1px solid rgba(143, 214, 200, 0.4);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .tab-pill:hover {
+    color: var(--color-primary);
+    border-color: var(--color-ocean);
+  }
+
+  .tab-pill.active {
+    background: var(--color-primary);
+    color: #FFFFFF;
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 6px rgba(11, 93, 103, 0.2);
+  }
+
+  .search-mini-wrap {
+    margin-left: auto;
+  }
+
+  .search-mini-input {
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(143, 214, 200, 0.5);
+    background: #FFFFFF;
+    font-size: 0.86rem;
+    outline: none;
+    width: 240px;
+    transition: all var(--transition-fast);
+  }
+
+  .search-mini-input:focus {
+    border-color: var(--color-ocean);
+    box-shadow: 0 0 0 3px rgba(15, 138, 139, 0.15);
+  }
+
+  /* Loading & Empty States */
+  .loading-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--color-slate-muted);
+  }
+
+  .spinner-circle {
+    width: 38px;
+    height: 38px;
+    margin: 0 auto 1rem;
+    border: 3px solid rgba(15, 138, 139, 0.2);
+    border-top-color: var(--color-ocean);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .empty-trips-card {
+    text-align: center;
+    padding: 3.5rem 2rem;
+    border-radius: var(--radius-xl);
+    max-width: 540px;
+    margin: 2rem auto;
+  }
+
+  .empty-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-trips-card h3 {
+    font-size: 1.5rem;
+    color: var(--color-slate);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-trips-card p {
+    color: var(--color-slate-muted);
+    margin-bottom: 1.8rem;
+    line-height: 1.5;
+  }
+
+  /* Grid of Trip Cards */
+  .trips-list-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+  }
+
+  /* Individual Trip Management Card */
+  :global(.trip-admin-card) {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(143, 214, 200, 0.35);
+    padding: 1.6rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  }
+
+  :global(.trip-admin-card:hover) {
+    box-shadow: var(--shadow-md);
+  }
+
+  :global(.card-top-bar) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid rgba(143, 214, 200, 0.25);
+  }
+
+  :global(.route-title-cluster) {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  :global(.route-main-text) {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-slate);
+    font-family: var(--font-display);
+  }
+
+  :global(.trip-status-pill) {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  :global(.status-publicado) {
+    background: rgba(15, 138, 139, 0.12);
+    color: #0F8A8B;
+  }
+
+  :global(.status-en-curso) {
+    background: rgba(217, 119, 6, 0.14);
+    color: #D97706;
+  }
+
+  :global(.status-finalizado) {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+  }
+
+  :global(.status-cancelado) {
+    background: rgba(220, 38, 38, 0.1);
+    color: #DC2626;
+  }
+
+  :global(.trip-meta-details) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+    background: rgba(248, 250, 252, 0.8);
+    padding: 1rem 1.2rem;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  :global(.meta-item-box) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  :global(.meta-label) {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+  }
+
+  :global(.meta-val) {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-slate);
+  }
+
+  /* Requests Section - Confirmar Selección */
+  :global(.trip-requests-section) {
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1.5px dashed rgba(143, 214, 200, 0.4);
+  }
+
+  :global(.requests-header) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  :global(.requests-title) {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  :global(.requests-list) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  :global(.request-card-row) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.2rem;
+    background: #FFFFFF;
+    border: 1px solid rgba(143, 214, 200, 0.4);
+    border-radius: var(--radius-md);
+    gap: 1rem;
+    flex-wrap: wrap;
+    transition: background var(--transition-fast);
+  }
+
+  :global(.request-card-row.row-pending) {
+    background: rgba(254, 243, 199, 0.3);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+
+  :global(.request-passenger-info) {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  :global(.passenger-avatar) {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #0B5D67;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  :global(.passenger-texts) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.passenger-name) {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-slate);
+  }
+
+  :global(.passenger-cupos) {
+    font-size: 0.8rem;
+    color: var(--color-ocean);
+    font-weight: 600;
+  }
+
+  :global(.passenger-note) {
+    font-size: 0.8rem;
+    color: var(--color-slate-muted);
+    font-style: italic;
+    margin-top: 0.15rem;
+  }
+
+  :global(.request-actions-group) {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  :global(.btn-confirm-selection) {
+    background: #0B5D67;
+    color: #FFFFFF;
+    border: none;
+    padding: 0.45rem 0.95rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all var(--transition-fast);
+  }
+
+  :global(.btn-confirm-selection:hover) {
+    background: #0F8A8B;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(11, 93, 103, 0.25);
+  }
+
+  :global(.btn-reject-selection) {
+    background: transparent;
+    color: #DC2626;
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  :global(.btn-reject-selection:hover) {
+    background: rgba(220, 38, 38, 0.1);
+  }
+
+  :global(.tag-status-accepted) {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  :global(.tag-status-rejected) {
+    background: rgba(239, 68, 68, 0.12);
+    color: #DC2626;
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  :global(.tag-status-cancelled) {
+    background: rgba(100, 116, 139, 0.12);
+    color: #64748B;
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  /* Trip Footer Actions */
+  :global(.card-footer-controls) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.4rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(143, 214, 200, 0.2);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  :global(.driver-chat-link) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--color-ocean);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.88rem;
+    transition: color var(--transition-fast);
+  }
+
+  :global(.driver-chat-link:hover) {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+    }
+    .search-mini-wrap {
+      width: 100%;
+      margin-left: 0;
+    }
+    .search-mini-input {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  import { authService, viajesService, solicitudesService, usuariosService, type ViajeResponse, type SolicitudResponse } from '../services';
+
+  const authGate = document.getElementById('my-trips-auth-gate');
+  const dashboardContent = document.getElementById('my-trips-content');
+  const btnGateLogin = document.getElementById('btn-gate-open-login');
+
+  const kpiTotalTrips = document.getElementById('kpi-total-trips');
+  const kpiActiveTrips = document.getElementById('kpi-active-trips');
+  const kpiPendingRequests = document.getElementById('kpi-pending-requests');
+
+  const loadingIndicator = document.getElementById('trips-loading-indicator');
+  const emptyCard = document.getElementById('trips-empty-card');
+  const tripsContainer = document.getElementById('my-trips-list-container');
+  const filterInput = document.getElementById('filter-trips-input') as HTMLInputElement | null;
+  const tabPills = document.querySelectorAll('.tab-pill');
+
+  let myTrips: ViajeResponse[] = [];
+  let tripRequestsMap: Map<string, SolicitudResponse[]> = new Map();
+  let currentFilter = 'all';
+  let searchTerm = '';
+
+  // Verificar Autenticación
+  function checkAuth() {
+    if (!authService.isAuthenticated()) {
+      if (authGate) authGate.style.display = 'block';
+      if (dashboardContent) dashboardContent.style.display = 'none';
+      return false;
+    }
+    if (authGate) authGate.style.display = 'none';
+    if (dashboardContent) dashboardContent.style.display = 'block';
+    return true;
+  }
+
+  btnGateLogin?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('request-auth-required', {
+      detail: { action: 'ver y gestionar tus viajes como conductor' }
+    }));
+  });
+
+  window.addEventListener('auth-state-changed', (e: any) => {
+    if (checkAuth()) {
+      loadDriverTrips();
+    }
+  });
+
+  // Inicialización
+  if (checkAuth()) {
+    loadDriverTrips();
+  }
+
+  // Cargar viajes publicados y sus solicitudes
+  async function loadDriverTrips() {
+    try {
+      if (loadingIndicator) loadingIndicator.style.display = 'block';
+      if (emptyCard) emptyCard.style.display = 'none';
+      if (tripsContainer) tripsContainer.innerHTML = '';
+
+      myTrips = await viajesService.getMisViajes();
+
+      // Cargar solicitudes de cada viaje en paralelo
+      const requestPromises = myTrips.map(async (viaje) => {
+        try {
+          const reqs = await solicitudesService.getSolicitudesPorViaje(viaje.id);
+          tripRequestsMap.set(viaje.id, reqs || []);
+        } catch {
+          tripRequestsMap.set(viaje.id, []);
+        }
+      });
+      await Promise.all(requestPromises);
+
+      updateKpis();
+      renderFilteredTrips();
+    } catch (err: any) {
+      console.error('Error cargando viajes del conductor:', err);
+      if (tripsContainer) {
+        tripsContainer.innerHTML = `
+          <div class="empty-trips-card glass-card">
+            <div class="empty-icon">⚠️</div>
+            <h3>Error al conectar con el servidor</h3>
+            <p>${err?.message || 'No se pudieron recuperar los viajes. Intenta nuevamente.'}</p>
+            <button type="button" class="btn btn-outline" id="btn-retry-load">Reintentar</button>
+          </div>
+        `;
+        document.getElementById('btn-retry-load')?.addEventListener('click', loadDriverTrips);
+      }
+    } finally {
+      if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+  }
+
+  // Actualizar métricas KPI
+  function updateKpis() {
+    if (kpiTotalTrips) kpiTotalTrips.textContent = String(myTrips.length);
+    const active = myTrips.filter(t => t.estado === 'PUBLICADO' || t.estado === 'EN_CURSO').length;
+    if (kpiActiveTrips) kpiActiveTrips.textContent = String(active);
+
+    let pendingCount = 0;
+    tripRequestsMap.forEach(reqs => {
+      pendingCount += reqs.filter(r => r.estado === 'PENDIENTE').length;
+    });
+    if (kpiPendingRequests) kpiPendingRequests.textContent = String(pendingCount);
+  }
+
+  // Filtrado y Renderizado
+  function renderFilteredTrips() {
+    if (!tripsContainer) return;
+
+    let filtered = myTrips.slice();
+
+    if (currentFilter === 'active') {
+      filtered = filtered.filter(t => t.estado === 'PUBLICADO' || t.estado === 'EN_CURSO');
+    } else if (currentFilter === 'finished') {
+      filtered = filtered.filter(t => t.estado === 'FINALIZADO' || t.estado === 'CANCELADO');
+    }
+
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(t => 
+        (t.origenNombre || '').toLowerCase().includes(q) ||
+        (t.destinoNombre || '').toLowerCase().includes(q) ||
+        (t.descripcion || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      if (emptyCard) emptyCard.style.display = 'block';
+      tripsContainer.innerHTML = '';
+      return;
+    }
+
+    if (emptyCard) emptyCard.style.display = 'none';
+
+    tripsContainer.innerHTML = filtered.map(viaje => renderTripCard(viaje)).join('');
+
+    // Adjuntar escuchadores a las acciones del viaje y solicitudes
+    attachCardListeners();
+  }
+
+  // Plantilla HTML de la tarjeta de viaje
+  function renderTripCard(viaje: ViajeResponse): string {
+    const requests = tripRequestsMap.get(viaje.id) || [];
+    const pendingReqs = requests.filter(r => r.estado === 'PENDIENTE');
+
+    const statusMap: Record<string, { label: string; class: string }> = {
+      'PUBLICADO': { label: 'Publicado (En Espera)', class: 'status-publicado' },
+      'EN_CURSO': { label: 'En Ruta (En Curso)', class: 'status-en-curso' },
+      'FINALIZADO': { label: 'Completado', class: 'status-finalizado' },
+      'CANCELADO': { label: 'Cancelado', class: 'status-cancelado' },
+    };
+    const currentStatus = statusMap[viaje.estado] || { label: viaje.estado, class: 'status-publicado' };
+
+    // Solicitudes recibidas
+    let requestsListHtml = '';
+    if (requests.length === 0) {
+      requestsListHtml = `
+        <div style="font-size: 0.88rem; color: #64748B; font-style: italic; padding: 0.5rem 0;">
+          Aún no hay solicitudes de reserva para este viaje.
+        </div>
+      `;
+    } else {
+      requestsListHtml = requests.map(req => {
+        const isPending = req.estado === 'PENDIENTE';
+        const isAccepted = req.estado === 'ACEPTADA';
+        const isRejected = req.estado === 'RECHAZADA';
+        const isCancelled = req.estado === 'CANCELADA';
+
+        let actionArea = '';
+        if (isPending) {
+          actionArea = `
+            <div class="request-actions-group">
+              <button 
+                type="button" 
+                class="btn-confirm-selection" 
+                data-request-id="${req.id}" 
+                data-trip-id="${viaje.id}"
+                title="Confirmar reserva y asignar cupos"
+              >
+                <span>✓ Confirmar Selección</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn-reject-selection" 
+                data-request-id="${req.id}"
+                data-trip-id="${viaje.id}"
+                title="Rechazar solicitud"
+              >
+                <span>✕ Rechazar</span>
+              </button>
+            </div>
+          `;
+        } else if (isAccepted) {
+          actionArea = `
+            <span class="tag-status-accepted">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Confirmado
+            </span>
+          `;
+        } else if (isRejected) {
+          actionArea = `<span class="tag-status-rejected">Rechazada</span>`;
+        } else if (isCancelled) {
+          actionArea = `<span class="tag-status-cancelled">Cancelada por Pasajero</span>`;
+        }
+
+        const note = req.mensaje ? `<span class="passenger-note">“${req.mensaje}”</span>` : '';
+
+        return `
+          <div class="request-card-row ${isPending ? 'row-pending' : ''}">
+            <div class="request-passenger-info">
+              <div class="passenger-avatar">P</div>
+              <div class="passenger-texts">
+                <span class="passenger-name">Pasajero (${req.pasajeroId.substring(0, 6)}...)</span>
+                <span class="passenger-cupos">Cupos solicitados: <strong>${req.cantidadCupos}</strong></span>
+                ${note}
+              </div>
+            </div>
+            ${actionArea}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Botones de ciclo de vida del viaje
+    let tripLifecycleButtons = '';
+    if (viaje.estado === 'PUBLICADO') {
+      tripLifecycleButtons = `
+        <button type="button" class="btn btn-outline btn-sm btn-change-trip-state" data-trip-id="${viaje.id}" data-new-state="EN_CURSO">
+          ▶ Iniciar Viaje
+        </button>
+        <button type="button" class="btn btn-danger-outline btn-sm btn-change-trip-state" style="color:#DC2626;border-color:rgba(220,38,38,0.3);" data-trip-id="${viaje.id}" data-new-state="CANCELADO">
+          ✕ Cancelar Viaje
+        </button>
+      `;
+    } else if (viaje.estado === 'EN_CURSO') {
+      tripLifecycleButtons = `
+        <button type="button" class="btn btn-primary btn-sm btn-change-trip-state" data-trip-id="${viaje.id}" data-new-state="FINALIZADO">
+          ✓ Marcar como Finalizado
+        </button>
+      `;
+    }
+
+    return `
+      <article class="trip-admin-card" data-trip-id="${viaje.id}">
+        <div class="card-top-bar">
+          <div class="route-title-cluster">
+            <span class="route-main-text">${viaje.origenNombre} ➔ ${viaje.destinoNombre}</span>
+          </div>
+          <span class="trip-status-pill ${currentStatus.class}">${currentStatus.label}</span>
+        </div>
+
+        <div class="trip-meta-details">
+          <div class="meta-item-box">
+            <span class="meta-label">Fecha y Hora</span>
+            <span class="meta-val">${viaje.fechaSalida} · ${viaje.horaSalida}</span>
+          </div>
+          <div class="meta-item-box">
+            <span class="meta-label">Cupos Disponibles</span>
+            <span class="meta-val">${viaje.cuposDisponibles} de ${viaje.cuposTotales} libres</span>
+          </div>
+          <div class="meta-item-box">
+            <span class="meta-label">Tarifa por Asiento</span>
+            <span class="meta-val">$${Number(viaje.tarifaAproximada).toFixed(2)} USD</span>
+          </div>
+        </div>
+
+        <!-- Sección de Solicitudes y Confirmación de Selección -->
+        <div class="trip-requests-section">
+          <div class="requests-header">
+            <div class="requests-title">
+              <span>👥 Pasajeros y Reservas</span>
+              ${pendingReqs.length > 0 ? `<span class="badge" style="background:#F59E0B;color:#fff;">${pendingReqs.length} por confirmar</span>` : ''}
+            </div>
+          </div>
+          <div class="requests-list">
+            ${requestsListHtml}
+          </div>
+        </div>
+
+        <!-- Controles Inferiores -->
+        <div class="card-footer-controls">
+          <a href="/mensajes?viajeId=${viaje.id}" class="driver-chat-link">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Abrir Chat con Pasajeros</span>
+          </a>
+          <div style="display:flex;gap:0.6rem;align-items:center;">
+            ${tripLifecycleButtons}
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  // Asignar eventos interactivos a cada tarjeta
+  function attachCardListeners() {
+    // 1. Confirmar Selección (Aceptar Solicitud)
+    document.querySelectorAll('.btn-confirm-selection').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const reqId = target.getAttribute('data-request-id');
+        const tripId = target.getAttribute('data-trip-id');
+        if (!reqId || !tripId) return;
+
+        try {
+          target.innerHTML = '<span>Confirmando...</span>';
+          target.setAttribute('disabled', 'true');
+
+          await solicitudesService.responderSolicitud(reqId, true);
+
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: '¡Selección Confirmada!',
+              desc: 'Has aceptado al pasajero y los cupos disponibles se han actualizado.',
+              icon: '✅'
+            }
+          }));
+
+          await loadDriverTrips();
+        } catch (err: any) {
+          console.error('Error al confirmar selección:', err);
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: 'Error al confirmar',
+              desc: err?.message || 'No se pudo confirmar la solicitud.',
+              icon: '⚠️'
+            }
+          }));
+          target.removeAttribute('disabled');
+          target.innerHTML = '<span>✓ Confirmar Selección</span>';
+        }
+      });
+    });
+
+    // 2. Rechazar Solicitud
+    document.querySelectorAll('.btn-reject-selection').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const reqId = target.getAttribute('data-request-id');
+        if (!reqId) return;
+
+        if (!confirm('¿Seguro que deseas rechazar esta solicitud de cupo?')) return;
+
+        try {
+          target.innerHTML = '<span>Rechazando...</span>';
+          target.setAttribute('disabled', 'true');
+
+          await solicitudesService.responderSolicitud(reqId, false);
+
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: 'Solicitud Rechazada',
+              desc: 'La solicitud ha sido rechazada.',
+              icon: 'ℹ️'
+            }
+          }));
+
+          await loadDriverTrips();
+        } catch (err: any) {
+          console.error('Error al rechazar solicitud:', err);
+          target.removeAttribute('disabled');
+          target.innerHTML = '<span>✕ Rechazar</span>';
+        }
+      });
+    });
+
+    // 3. Cambiar estado del viaje (Iniciar, Cancelar, Finalizar)
+    document.querySelectorAll('.btn-change-trip-state').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const tripId = target.getAttribute('data-trip-id');
+        const newState = target.getAttribute('data-new-state');
+        if (!tripId || !newState) return;
+
+        if (newState === 'CANCELADO' && !confirm('¿Estás seguro de cancelar este viaje publicado? Los pasajeros serán notificados.')) {
+          return;
+        }
+
+        try {
+          target.setAttribute('disabled', 'true');
+          await viajesService.cambiarEstado(tripId, newState);
+
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: 'Estado Actualizado',
+              desc: `El viaje ahora está en estado: ${newState}`,
+              icon: '🚗'
+            }
+          }));
+
+          await loadDriverTrips();
+        } catch (err: any) {
+          console.error('Error al cambiar estado del viaje:', err);
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: 'Error',
+              desc: err?.message || 'No se pudo actualizar el estado del viaje.',
+              icon: '⚠️'
+            }
+          }));
+          target.removeAttribute('disabled');
+        }
+      });
+    });
+  }
+
+  // Filtrado de pestañas
+  tabPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      tabPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      currentFilter = pill.getAttribute('data-filter') || 'all';
+      renderFilteredTrips();
+    });
+  });
+
+  // Buscador
+  filterInput?.addEventListener('input', (e) => {
+    searchTerm = (e.target as HTMLInputElement).value;
+    renderFilteredTrips();
+  });
+</script>

@@ -1,0 +1,578 @@
+---
+// AuthModal.astro - Modal minimalista costero para Registro e Inicio de Sesión
+---
+
+<div class="auth-modal-backdrop" id="auth-modal" aria-hidden="true" role="dialog" aria-labelledby="auth-modal-title">
+  <div class="auth-modal-container glass-card">
+    <!-- Header with Close & Mode Switcher -->
+    <div class="auth-modal-header">
+      <div class="auth-brand-badge">
+        <span class="badge badge-fresh">Comunidad Rutea SV</span>
+      </div>
+      <button type="button" class="auth-close-btn" id="auth-close-btn" aria-label="Cerrar modal">&times;</button>
+    </div>
+
+    <!-- Auth Tabs Switcher -->
+    <div class="auth-tabs" role="tablist">
+      <button type="button" class="auth-tab-btn active" id="tab-register" role="tab" aria-selected="true">
+        Crear Cuenta (Registro)
+      </button>
+      <button type="button" class="auth-tab-btn" id="tab-login" role="tab" aria-selected="false">
+        Iniciar Sesión
+      </button>
+    </div>
+
+    <!-- Error/Alert message banner -->
+    <div class="auth-alert-box" id="auth-alert" style="display: none;" role="alert">
+      <span class="auth-alert-icon">⚠️</span>
+      <span class="auth-alert-text" id="auth-alert-text">Error en los datos</span>
+    </div>
+
+    <!-- Success message banner -->
+    <div class="auth-success-box" id="auth-success" style="display: none;" role="status">
+      <span class="auth-success-icon">✓</span>
+      <span class="auth-success-text" id="auth-success-text">¡Cuenta creada con éxito!</span>
+    </div>
+
+    <!-- FORM 1: REGISTRO -->
+    <form class="auth-form" id="register-form" onsubmit="return false;">
+      <h3 class="auth-form-title">Únete para viajar fresco y seguro</h3>
+      <p class="auth-form-subtitle">Crea tu perfil verificado para compartir viajes hacia la costa o la ciudad.</p>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="reg-nombre">Nombre:</label>
+          <input type="text" id="reg-nombre" class="auth-input" placeholder="Ej. Juan" required />
+        </div>
+        <div class="form-group">
+          <label for="reg-apellido">Apellido:</label>
+          <input type="text" id="reg-apellido" class="auth-input" placeholder="Ej. Pérez" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-correo">Correo electrónico:</label>
+        <input type="email" id="reg-correo" class="auth-input" placeholder="juan.perez@ejemplo.com" required />
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="reg-telefono">Teléfono El Salvador (+503):</label>
+          <input type="tel" id="reg-telefono" class="auth-input" placeholder="+503 7000-0000" value="+503 7" required />
+        </div>
+        <div class="form-group">
+          <label for="reg-rol">Tipo de perfil principal:</label>
+          <select id="reg-rol" class="auth-select">
+            <option value="CLIENTE">Pasajero</option>
+            <option value="CONDUCTOR">Conductor con Auto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-password">Contraseña (mínimo 6 caracteres):</label>
+        <div class="password-wrapper">
+          <input type="password" id="reg-password" class="auth-input" placeholder="••••••••" minlength="6" required />
+          <button type="button" class="toggle-pwd-btn" data-target="reg-password" title="Ver contraseña" aria-label="Ver contraseña">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-register">
+        <span class="btn-text">Registrarme en Rutea</span>
+        <span class="btn-spinner" style="display: none;">Procesando...</span>
+      </button>
+
+      <p class="auth-terms-note">
+        Al registrarte aceptas las normas de convivencia vial y política de privacidad de Rutea El Salvador.
+      </p>
+    </form>
+
+    <!-- FORM 2: LOGIN -->
+    <form class="auth-form" id="login-form" style="display: none;" onsubmit="return false;">
+      <h3 class="auth-form-title">Bienvenido de vuelta</h3>
+      <p class="auth-form-subtitle">Ingresa a tu cuenta para gestionar tus rutas y reservas.</p>
+
+      <div class="form-group">
+        <label for="log-correo">Correo electrónico:</label>
+        <input type="email" id="log-correo" class="auth-input" placeholder="admin@admin.com" value="admin@admin.com" required />
+      </div>
+
+      <div class="form-group">
+        <label for="log-password">Contraseña:</label>
+        <div class="password-wrapper">
+          <input type="password" id="log-password" class="auth-input" placeholder="••••••••" value="admin" required />
+          <button type="button" class="toggle-pwd-btn" data-target="log-password" title="Ver contraseña" aria-label="Ver contraseña">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary auth-submit-btn" id="btn-submit-login">
+        <span class="btn-text">Iniciar Sesión</span>
+        <span class="btn-spinner" style="display: none;">Ingresando...</span>
+      </button>
+
+      <div class="auth-demo-hint">
+        <span>💡 Cuenta demo precargada: <code>admin@admin.com</code> / clave: <code>admin</code></span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .auth-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(28, 31, 42, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+  }
+
+  .auth-modal-backdrop.show {
+    display: flex;
+    opacity: 1;
+  }
+
+  .auth-modal-container {
+    width: 100%;
+    max-width: 480px;
+    background: #FFFFFF;
+    border-radius: var(--radius-xl);
+    padding: 2.2rem 2rem;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+    max-height: 92vh;
+    overflow-y: auto;
+    position: relative;
+    animation: authPopIn 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes authPopIn {
+    from { transform: scale(0.93) translateY(10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .auth-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .auth-close-btn:hover {
+    color: var(--color-slate);
+  }
+
+  /* Tabs Switcher */
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--color-sand-light);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(11, 93, 103, 0.1);
+  }
+
+  .auth-tab-btn {
+    padding: 0.65rem 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .auth-tab-btn.active {
+    background: #FFFFFF;
+    color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(11, 93, 103, 0.12);
+  }
+
+  /* Alert and Success Banners */
+  .auth-alert-box,
+  .auth-success-box {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-alert-box {
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+  }
+
+  .auth-success-box {
+    background: #ECFDF5;
+    border: 1px solid #6EE7B7;
+    color: #065F46;
+  }
+
+  /* Form */
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .auth-form-title {
+    font-size: 1.35rem;
+    color: var(--color-slate);
+    line-height: 1.2;
+  }
+
+  .auth-form-subtitle {
+    font-size: 0.88rem;
+    color: var(--color-slate-muted);
+    margin-top: -0.5rem;
+  }
+
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .form-group label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .auth-input,
+  .auth-select {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.16);
+    background: #FFFFFF;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+    outline: none;
+    transition: all var(--transition-fast);
+  }
+
+  .auth-input:focus,
+  .auth-select:focus {
+    border-color: var(--color-ocean);
+    box-shadow: 0 0 0 3px rgba(143, 214, 200, 0.35);
+  }
+
+  .password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .toggle-pwd-btn {
+    position: absolute;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+
+  .toggle-pwd-btn:hover {
+    opacity: 1;
+  }
+
+  .auth-submit-btn {
+    width: 100%;
+    padding: 0.85rem;
+    font-size: 0.98rem;
+    margin-top: 0.4rem;
+  }
+
+  .auth-terms-note {
+    font-size: 0.75rem;
+    color: var(--color-slate-muted);
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .auth-demo-hint {
+    font-size: 0.8rem;
+    color: var(--color-slate-muted);
+    background: var(--color-sand-light);
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px dashed rgba(11, 93, 103, 0.2);
+    text-align: center;
+  }
+
+  .auth-demo-hint code {
+    background: rgba(11, 93, 103, 0.1);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 520px) {
+    .form-grid-2 {
+      grid-template-columns: 1fr;
+    }
+    .auth-modal-container {
+      padding: 1.5rem 1.25rem;
+    }
+  }
+</style>
+
+<script>
+  import { authService, type RegisterRequest, type LoginRequest } from '../services';
+
+  const authModal = document.getElementById('auth-modal');
+  const authCloseBtn = document.getElementById('auth-close-btn');
+  const tabRegister = document.getElementById('tab-register');
+  const tabLogin = document.getElementById('tab-login');
+  const registerForm = document.getElementById('register-form') as HTMLFormElement | null;
+  const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
+  const alertBox = document.getElementById('auth-alert');
+  const alertText = document.getElementById('auth-alert-text');
+  const successBox = document.getElementById('auth-success');
+  const successText = document.getElementById('auth-success-text');
+
+  // Trigger buttons
+  const btnLoginHeader = document.getElementById('btn-login');
+
+  btnLoginHeader?.addEventListener('click', () => {
+    switchMode('login');
+    openAuthModal();
+  });
+
+  // Mobile login trigger or others
+  document.querySelectorAll('.btn-open-auth-register').forEach(el => {
+    el.addEventListener('click', () => {
+      switchMode('register');
+      openAuthModal();
+    });
+  });
+  // Event listener for required auth actions (e.g. attempting to publish without being logged in)
+  window.addEventListener('request-auth-required', ((e: CustomEvent) => {
+    switchMode('login');
+    openAuthModal();
+    if (e.detail?.message) {
+      showError(e.detail.message);
+    }
+  }) as EventListener);
+  // Tab switching
+  tabRegister?.addEventListener('click', () => switchMode('register'));
+  tabLogin?.addEventListener('click', () => switchMode('login'));
+
+  function switchMode(mode: 'register' | 'login') {
+    hideAlerts();
+    if (mode === 'register') {
+      tabRegister?.classList.add('active');
+      tabRegister?.setAttribute('aria-selected', 'true');
+      tabLogin?.classList.remove('active');
+      tabLogin?.setAttribute('aria-selected', 'false');
+      if (registerForm) registerForm.style.display = 'flex';
+      if (loginForm) loginForm.style.display = 'none';
+    } else {
+      tabLogin?.classList.add('active');
+      tabLogin?.setAttribute('aria-selected', 'true');
+      tabRegister?.classList.remove('active');
+      tabRegister?.setAttribute('aria-selected', 'false');
+      if (loginForm) loginForm.style.display = 'flex';
+      if (registerForm) registerForm.style.display = 'none';
+    }
+  }
+
+  // Password visibility toggles
+  document.querySelectorAll('.toggle-pwd-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const targetId = (e.currentTarget as HTMLElement).getAttribute('data-target');
+      if (targetId) {
+        const input = document.getElementById(targetId) as HTMLInputElement | null;
+        if (input) {
+          input.type = input.type === 'password' ? 'text' : 'password';
+        }
+      }
+    });
+  });
+
+  // Close handlers
+  authCloseBtn?.addEventListener('click', closeAuthModal);
+  window.addEventListener('click', (e) => {
+    if (e.target === authModal) closeAuthModal();
+  });
+
+  function openAuthModal() {
+    if (!authModal) return;
+    authModal.style.display = 'flex';
+    setTimeout(() => {
+      authModal.classList.add('show');
+      authModal.setAttribute('aria-hidden', 'false');
+    }, 10);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAuthModal() {
+    if (!authModal) return;
+    authModal.classList.remove('show');
+    authModal.setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      authModal.style.display = 'none';
+      document.body.style.overflow = '';
+      hideAlerts();
+    }, 200);
+  }
+
+  function showError(msg: string) {
+    if (alertBox && alertText) {
+      alertText.textContent = msg;
+      alertBox.style.display = 'flex';
+      if (successBox) successBox.style.display = 'none';
+    }
+  }
+
+  function showSuccess(msg: string) {
+    if (successBox && successText) {
+      successText.textContent = msg;
+      successBox.style.display = 'flex';
+      if (alertBox) alertBox.style.display = 'none';
+    }
+  }
+
+  function hideAlerts() {
+    if (alertBox) alertBox.style.display = 'none';
+    if (successBox) successBox.style.display = 'none';
+  }
+
+  // SUBMIT REGISTRO
+  registerForm?.addEventListener('submit', async () => {
+    hideAlerts();
+    const nombre = (document.getElementById('reg-nombre') as HTMLInputElement)?.value.trim();
+    const apellido = (document.getElementById('reg-apellido') as HTMLInputElement)?.value.trim();
+    const correo = (document.getElementById('reg-correo') as HTMLInputElement)?.value.trim();
+    const telefono = (document.getElementById('reg-telefono') as HTMLInputElement)?.value.trim();
+    const contrasena = (document.getElementById('reg-password') as HTMLInputElement)?.value;
+    const rol = (document.getElementById('reg-rol') as HTMLSelectElement)?.value || 'CLIENTE';
+
+    if (!nombre || !apellido || !correo || !telefono || !contrasena) {
+      showError('Todos los campos son obligatorios');
+      return;
+    }
+
+    if (contrasena.length < 6) {
+      showError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    const payload: RegisterRequest = {
+      nombre,
+      apellido,
+      correo,
+      telefono,
+      contrasena,
+      roles: ['CONDUCTOR', 'CLIENTE', 'USUARIO']
+    };
+
+    const submitBtn = document.getElementById('btn-submit-register') as HTMLButtonElement | null;
+    const btnText = submitBtn?.querySelector('.btn-text') as HTMLElement | null;
+    const btnSpinner = submitBtn?.querySelector('.btn-spinner') as HTMLElement | null;
+
+    if (btnText && btnSpinner) {
+      btnText.style.display = 'none';
+      btnSpinner.style.display = 'inline';
+    }
+
+    try {
+      const res = await authService.register(payload);
+      showSuccess(`¡Cuenta creada con éxito para ${res.nombre}! Iniciando sesión...`);
+
+      // Login automático
+      setTimeout(async () => {
+        try {
+          await authService.login({ correo, contrasena });
+          updateNavbarUser(res.nombre);
+          setTimeout(closeAuthModal, 800);
+        } catch {
+          switchMode('login');
+        }
+      }, 900);
+    } catch (err: any) {
+      const msg = err.data?.message || err.message || 'Error al registrar usuario';
+      showError(msg);
+    } finally {
+      if (btnText && btnSpinner) {
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+      }
+    }
+  });
+
+  // SUBMIT LOGIN
+  loginForm?.addEventListener('submit', async () => {
+    hideAlerts();
+    const correo = (document.getElementById('log-correo') as HTMLInputElement)?.value.trim();
+    const contrasena = (document.getElementById('log-password') as HTMLInputElement)?.value;
+
+    if (!correo || !contrasena) {
+      showError('Ingresa tu correo y contraseña');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-submit-login') as HTMLButtonElement | null;
+    const btnText = submitBtn?.querySelector('.btn-text') as HTMLElement | null;
+    const btnSpinner = submitBtn?.querySelector('.btn-spinner') as HTMLElement | null;
+
+    if (btnText && btnSpinner) {
+      btnText.style.display = 'none';
+      btnSpinner.style.display = 'inline';
+    }
+
+    try {
+      const auth = await authService.login({ correo, contrasena });
+      showSuccess(`¡Bienvenido de vuelta, ${auth.nombre}!`);
+      updateNavbarUser(auth.nombre);
+      setTimeout(closeAuthModal, 800);
+    } catch (err: any) {
+      const msg = err.data?.message || 'Credenciales incorrectas o cuenta inactiva';
+      showError(msg);
+    } finally {
+      if (btnText && btnSpinner) {
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+      }
+    }
+  });
+
+  function updateNavbarUser(_name?: string) {
+    const user = authService.getStoredUser();
+    if (user) {
+      window.dispatchEvent(new CustomEvent('auth-state-changed', { detail: { user } }));
+    }
+  }
+</script>

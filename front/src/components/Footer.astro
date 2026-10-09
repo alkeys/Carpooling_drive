@@ -1,0 +1,257 @@
+---
+// Footer.astro - Pie de página costero minimalista
+---
+
+<footer class="footer-wrapper">
+  <div class="container footer-container">
+    <div class="footer-top-grid">
+      <!-- Brand Column -->
+      <div class="footer-brand-col">
+        <div class="footer-brand-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="10" fill="#0B5D67" />
+            <path d="M4 25C11 19 17 29 23 23C27 19 32 22 32 22" stroke="#8FD6C8" stroke-width="2.5" stroke-linecap="round" opacity="0.5" />
+            <path d="M7 21C12 13 21 12 29 16" stroke="#F2E9D8" stroke-width="2.5" stroke-linecap="round" />
+            <circle cx="21" cy="15" r="3.5" fill="#8FD6C8" />
+          </svg>
+          <span class="footer-brand-name">Rutea</span>
+        </div>
+        <p class="footer-brand-desc">
+          Plataforma de carpooling inteligente, fresca y segura diseñada para conectar a la comunidad en El Salvador. Menos tráfico, menos emisiones y más cercanía al mar.
+        </p>
+        <div class="footer-status-pill">
+          <span class="status-live-dot"></span>
+          <span>Red API v1 en vivo · PostGIS Activo</span>
+        </div>
+      </div>
+
+      <!-- Links Col 1: Rutas -->
+      <div class="footer-links-col">
+        <h4>Rutas Frecuentes</h4>
+        <ul>
+          <li><a href="#buscar">San Salvador ⇄ El Tunco</a></li>
+          <li><a href="#buscar">Santa Tecla ⇄ San Salvador</a></li>
+          <li><a href="#buscar">San Salvador ⇄ Costa del Sol</a></li>
+          <li><a href="#buscar">Santa Ana ⇄ San Salvador</a></li>
+          <li><a href="#buscar">San Salvador ⇄ El Zonte</a></li>
+        </ul>
+      </div>
+
+      <!-- Links Col 2: Seguridad -->
+      <div class="footer-links-col">
+        <h4>Seguridad y Confianza</h4>
+        <ul>
+          <li><a href="#seguridad">Verificación de Identidad (DUI)</a></li>
+          <li><a href="#seguridad">Seguimiento Geoespacial</a></li>
+          <li><a href="#seguridad">Calificaciones de la Comunidad</a></li>
+          <li><a href="#seguridad">Normas de Convivencia</a></li>
+          <li><a href="#seguridad">Botón de Asistencia</a></li>
+        </ul>
+      </div>
+
+      <!-- Links Col 3: Comunidad & Apps -->
+      <div class="footer-links-col">
+        <h4>Comunidad Costera</h4>
+        <p class="community-pitch">
+          Únete al movimiento de movilidad colaborativa en El Salvador.
+        </p>
+        <div class="social-tags">
+          <span class="social-tag">🇸🇻 El Salvador</span>
+          <span class="social-tag">🌊 Surf City</span>
+          <span class="social-tag">🌱 Cero Emisiones</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Strip -->
+    <div class="footer-bottom-strip">
+      <p class="copyright-text">
+        &copy; {new Date().getFullYear()} Rutea El Salvador. Todos los derechos reservados.
+      </p>
+      <div class="bottom-links">
+        <a href="#">Privacidad de Datos</a>
+        <span class="sep">·</span>
+        <a href="#">Términos del Servicio</a>
+        <span class="sep">·</span>
+        <a href="#">Soporte Comunitario</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer-wrapper {
+    background-color: var(--color-slate);
+    color: #FFFFFF;
+    padding-top: 4.5rem;
+    padding-bottom: 2.5rem;
+    position: relative;
+    border-top: 3px solid var(--color-ocean);
+  }
+
+  .footer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  .footer-top-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+    gap: 3rem;
+  }
+
+  .footer-brand-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .footer-brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .footer-brand-name {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: -0.03em;
+  }
+
+  .footer-brand-desc {
+    color: #A0AEC0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    max-width: 320px;
+  }
+
+  .footer-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--color-seafoam);
+    background: rgba(143, 214, 200, 0.12);
+    padding: 0.35rem 0.8rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(143, 214, 200, 0.25);
+    align-self: flex-start;
+  }
+
+  .status-live-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #10B981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10B981;
+  }
+
+  /* Links Column */
+  .footer-links-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .footer-links-col h4 {
+    color: #FFFFFF;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .footer-links-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .footer-links-col a {
+    color: #A0AEC0;
+    font-size: 0.88rem;
+    transition: color var(--transition-fast);
+  }
+
+  .footer-links-col a:hover {
+    color: var(--color-seafoam);
+  }
+
+  .community-pitch {
+    color: #A0AEC0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .social-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .social-tag {
+    font-size: 0.78rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-sand);
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Bottom Strip */
+  .footer-bottom-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .copyright-text {
+    font-size: 0.82rem;
+    color: #718096;
+  }
+
+  .bottom-links {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .bottom-links a {
+    font-size: 0.82rem;
+    color: #A0AEC0;
+  }
+
+  .bottom-links a:hover {
+    color: var(--color-seafoam);
+  }
+
+  .bottom-links .sep {
+    color: #4A5568;
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 992px) {
+    .footer-top-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .footer-top-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .footer-bottom-strip {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>

@@ -1,0 +1,2233 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import AuthModal from '../components/AuthModal.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout 
+  title="Publicar Viaje | Rutea El Salvador - Conduce, Comparte y Ahorra"
+  description="Publica tu ruta en El Salvador con mapa interactivo. Selecciona origen, destino y paradas hacia El Tunco, Surf City o San Salvador, define tus cupos y comparte gastos con pasajeros verificados."
+>
+  <!-- Leaflet CSS -->
+  <link 
+    rel="stylesheet" 
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+    crossorigin="" 
+  />
+
+  <Navbar />
+
+  <main class="publish-page-main">
+    <div class="container">
+      <!-- Breadcrumbs & Heading -->
+      <nav class="publish-breadcrumb" aria-label="Migas de pan">
+        <a href="/">Inicio</a>
+        <span class="bc-sep">/</span>
+        <span class="bc-current">Publicar un Viaje</span>
+      </nav>
+
+      <div class="publish-hero-header">
+        <div class="publish-header-badge">
+          <span class="badge badge-fresh">🚗 Modo Conductor</span>
+          <span class="publish-header-pill">100% de aportes para ti</span>
+        </div>
+        <h1 class="publish-main-title">Publica tu viaje y comparte gastos de gasolina</h1>
+        <p class="publish-main-sub">
+          Traza tu ruta de forma visual en el mapa interactivo, selecciona tus puntos de encuentro seguros y viaja acompañado por El Salvador con pasajeros verificados.
+        </p>
+      </div>
+
+      <!-- Main Publishing Layout (2 Columns) -->
+      <div class="publish-grid-layout">
+        <!-- LEFT COLUMN: The Interactive Builder Form & Map -->
+        <div class="publish-builder-column">
+
+          <!-- Alert Banner -->
+          <div class="publish-alert" id="publish-global-alert" style="display: none;" role="alert">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-body">
+              <strong id="publish-alert-title">Atención</strong>
+              <p id="publish-alert-text">Por favor revisa los campos señalados.</p>
+            </div>
+          </div>
+
+          <form id="dedicated-publish-form" class="publish-form-card" onsubmit="return false;">
+            
+            <!-- STEP 1: Interactive Route & Map -->
+            <section class="builder-section">
+              <div class="section-badge-header">
+                <span class="step-number">1</span>
+                <div>
+                  <h2 class="section-title">Traza tu Ruta en el Mapa</h2>
+                  <p class="section-desc">Haz clic en el mapa para fijar tu punto de salida, llegada o paradas intermedias.</p>
+                </div>
+              </div>
+
+              <!-- Route Quick Presets -->
+              <div class="route-presets-wrapper">
+                <span class="presets-label">Rutas frecuentes:</span>
+                <div class="presets-pills">
+                  <button type="button" class="preset-pill active" data-preset="tunco">
+                    🏄 S.S. Multiplaza ➔ El Tunco
+                  </button>
+                  <button type="button" class="preset-pill" data-preset="zonte">
+                    🌊 Santa Tecla ➔ El Zonte
+                  </button>
+                  <button type="button" class="preset-pill" data-preset="sol">
+                    🌴 S.S. ➔ Costa del Sol
+                  </button>
+                  <button type="button" class="preset-pill" data-preset="santaana">
+                    🏛️ Santa Ana ➔ San Salvador
+                  </button>
+                  <button type="button" class="preset-pill" data-preset="aeropuerto">
+                    ✈️ San Salvador ➔ Aeropuerto AOP
+                  </button>
+                </div>
+              </div>
+
+              <!-- Map Interaction Toolbar -->
+              <div class="map-toolbar">
+                <span class="toolbar-label">Herramienta activa:</span>
+                <div class="map-mode-buttons">
+                  <button type="button" class="btn-mode active" id="btn-mode-origin" title="Haz clic en el mapa para mover el punto de origen">
+                    <span class="mode-dot dot-origin"></span>
+                    <span>1. Fijar Origen</span>
+                  </button>
+                  <button type="button" class="btn-mode" id="btn-mode-dest" title="Haz clic en el mapa para mover el punto de destino">
+                    <span class="mode-dot dot-dest"></span>
+                    <span>2. Fijar Destino</span>
+                  </button>
+                  <button type="button" class="btn-mode" id="btn-mode-stop" title="Haz clic en el mapa para añadir una parada intermedia">
+                    <span class="mode-dot dot-stop"></span>
+                    <span>+ Añadir Parada</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Interactive Leaflet Map Container -->
+              <div class="map-container-frame">
+                <div id="route-map" class="route-map" style="height: 420px; width: 100%;"></div>
+                
+                <!-- Overlay badge with live metrics -->
+                <div class="map-metrics-overlay" id="map-metrics-overlay">
+                  <div class="metric-item">
+                    <span class="metric-icon">🛣️</span>
+                    <div>
+                      <span class="metric-label">Distancia estimada</span>
+                      <strong class="metric-val" id="metric-distance">38 km</strong>
+                    </div>
+                  </div>
+                  <div class="metric-sep"></div>
+                  <div class="metric-item">
+                    <span class="metric-icon">⏱️</span>
+                    <div>
+                      <span class="metric-label">Tiempo aprox.</span>
+                      <strong class="metric-val" id="metric-duration">45 min directo</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Location Inputs Grid -->
+              <div class="location-fields-grid">
+                <!-- Origin -->
+                <div class="field-card origin-card">
+                  <div class="field-card-header">
+                    <span class="field-dot dot-origin"></span>
+                    <label for="pub-origin-input">Punto de Salida / Origen:</label>
+                  </div>
+                  <input 
+                    type="text" 
+                    id="pub-origin-input" 
+                    class="pub-input" 
+                    placeholder="Ej. San Salvador (Centro Comercial Multiplaza)" 
+                    value="San Salvador (Multiplaza)" 
+                    required 
+                  />
+                  <div class="coord-badge" id="origin-coord-badge">
+                    <span>📍 Lat: 13.6739, Lon: -89.2514</span>
+                  </div>
+                </div>
+
+                <!-- Destination -->
+                <div class="field-card dest-card">
+                  <div class="field-card-header">
+                    <span class="field-dot dot-dest"></span>
+                    <label for="pub-dest-input">Punto de Llegada / Destino:</label>
+                  </div>
+                  <input 
+                    type="text" 
+                    id="pub-dest-input" 
+                    class="pub-input" 
+                    placeholder="Ej. Playa El Tunco, La Libertad" 
+                    value="Playa El Tunco, La Libertad" 
+                    required 
+                  />
+                  <div class="coord-badge" id="dest-coord-badge">
+                    <span>🏁 Lat: 13.4938, Lon: -89.3853</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Intermediate Stops Container -->
+              <div class="intermediate-stops-wrap" id="intermediate-stops-wrap">
+                <div class="stops-header">
+                  <label>Paradas intermedias opcionales (Puntos de recogida):</label>
+                  <button type="button" class="btn-text-action" id="btn-add-stop-row">
+                    + Añadir parada manual
+                  </button>
+                </div>
+                <div id="stops-list-container" class="stops-list">
+                  <!-- Dynamic stops rows injected here -->
+                </div>
+              </div>
+            </section>
+
+            <!-- STEP 2: Date & Time Schedule -->
+            <section class="builder-section">
+              <div class="section-badge-header">
+                <span class="step-number">2</span>
+                <div>
+                  <h2 class="section-title">Fecha y Horario de Salida</h2>
+                  <p class="section-desc">Programa con puntualidad para que los pasajeros organicen su llegada.</p>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <!-- Date picker & Quick days -->
+                <div class="form-group">
+                  <label for="pub-date-input">Fecha del viaje:</label>
+                  <input type="date" id="pub-date-input" class="pub-input" required />
+                  <div class="quick-pills-row" id="date-quick-pills">
+                    <button type="button" class="pill-shortcut active" data-days="0">Hoy</button>
+                    <button type="button" class="pill-shortcut" data-days="1">Mañana</button>
+                    <button type="button" class="pill-shortcut" data-days="2">Pasado Mañana</button>
+                    <button type="button" class="pill-shortcut" data-days="weekend">Fin de semana</button>
+                  </div>
+                </div>
+
+                <!-- Time picker & Quick hours -->
+                <div class="form-group">
+                  <label for="pub-time-input">Hora de partida:</label>
+                  <input type="time" id="pub-time-input" class="pub-input" value="07:00" required />
+                  <div class="quick-pills-row" id="time-quick-pills">
+                    <button type="button" class="pill-shortcut" data-time="06:30">06:30 AM</button>
+                    <button type="button" class="pill-shortcut active" data-time="07:00">07:00 AM</button>
+                    <button type="button" class="pill-shortcut" data-time="08:00">08:00 AM</button>
+                    <button type="button" class="pill-shortcut" data-time="16:30">04:30 PM</button>
+                    <button type="button" class="pill-shortcut" data-time="17:30">05:30 PM</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- STEP 3: Vehicle Selection & Management -->
+            <section class="builder-section">
+              <div class="section-badge-header">
+                <span class="step-number">3</span>
+                <div>
+                  <h2 class="section-title">Tu Vehículo</h2>
+                  <p class="section-desc">Elige el auto con el que realizarás la ruta o registra uno nuevo.</p>
+                </div>
+              </div>
+
+              <!-- Driver Vehicles Visual Selector -->
+              <div class="vehicles-visual-wrapper">
+                <div class="vehicle-list-radios" id="driver-vehicles-container">
+                  <div class="vehicle-loading-placeholder">
+                    <span>Cargando tus vehículos verificados...</span>
+                  </div>
+                </div>
+
+                <!-- Add New Vehicle Form Drawer -->
+                <div class="new-vehicle-box" id="new-vehicle-box" style="display: none;">
+                  <h3 class="new-vehicle-title">Registrar Nuevo Vehículo</h3>
+                  <div class="form-row-3">
+                    <div class="form-group">
+                      <label for="new-veh-brand">Marca:</label>
+                      <input type="text" id="new-veh-brand" class="pub-input" placeholder="Toyota, Mazda, Kia" value="Toyota" />
+                    </div>
+                    <div class="form-group">
+                      <label for="new-veh-model">Modelo:</label>
+                      <input type="text" id="new-veh-model" class="pub-input" placeholder="Corolla, CX-30, Rio" value="Corolla" />
+                    </div>
+                    <div class="form-group">
+                      <label for="new-veh-year">Año:</label>
+                      <input type="number" id="new-veh-year" class="pub-input" min="1995" max="2027" value="2023" />
+                    </div>
+                  </div>
+                  <div class="form-row-3">
+                    <div class="form-group">
+                      <label for="new-veh-plate">Placa Salvadoreña:</label>
+                      <input type="text" id="new-veh-plate" class="pub-input" placeholder="P-123456" value="P-78219" />
+                    </div>
+                    <div class="form-group">
+                      <label for="new-veh-color">Color:</label>
+                      <input type="text" id="new-veh-color" class="pub-input" placeholder="Gris, Blanco, Azul" value="Blanco" />
+                    </div>
+                    <div class="form-group">
+                      <label for="new-veh-capacity">Capacidad Pasajeros:</label>
+                      <select id="new-veh-capacity" class="pub-select">
+                        <option value="4" selected>4 pasajeros (Sedán/Hatchback)</option>
+                        <option value="5">5 pasajeros (Camioneta/SUV)</option>
+                        <option value="7">7 pasajeros (Van/Familiar)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- STEP 4: Seats & Fair Fuel Share Calculator -->
+            <section class="builder-section">
+              <div class="section-badge-header">
+                <span class="step-number">4</span>
+                <div>
+                  <h2 class="section-title">Asientos y Aporte Justo</h2>
+                  <p class="section-desc">Define cuántos cupos ofreces y la contribución económica por asiento.</p>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="pub-seats-select">Asientos disponibles para pasajeros:</label>
+                  <select id="pub-seats-select" class="pub-select">
+                    <option value="1">1 asiento</option>
+                    <option value="2">2 asientos</option>
+                    <option value="3" selected>3 asientos (Recomendado para comodidad)</option>
+                    <option value="4">4 asientos</option>
+                  </select>
+                  <span class="field-hint">Dejar el asiento del medio libre mejora la experiencia.</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="pub-price-input">Aporte sugerido por asiento ($ USD):</label>
+                  <div class="price-input-wrapper">
+                    <span class="currency-symbol">$</span>
+                    <input 
+                      type="number" 
+                      id="pub-price-input" 
+                      class="pub-input price-field" 
+                      step="0.25" 
+                      min="1.00" 
+                      max="15.00" 
+                      value="2.50" 
+                      required 
+                    />
+                    <span class="price-unit-tag">/ persona</span>
+                  </div>
+                  <span class="field-hint" id="price-hint">Rango recomendado: $2.00 - $3.50 según la distancia.</span>
+                </div>
+              </div>
+
+              <!-- Fair Share Savings Calculator Widget -->
+              <div class="savings-calc-widget">
+                <div class="calc-icon-box">⛽</div>
+                <div class="calc-info">
+                  <span class="calc-label">Aporte total estimado para tu viaje:</span>
+                  <div class="calc-amount-row">
+                    <strong class="calc-total-usd" id="calc-total-display">$7.50</strong>
+                    <span class="calc-formula-sub" id="calc-formula-display">(3 asientos × $2.50)</span>
+                  </div>
+                  <p class="calc-tip">
+                    Cubres hasta el 70% de tus costos de combustible y peajes en esta ruta.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <!-- STEP 5: Amenities & Trip Notes -->
+            <section class="builder-section">
+              <div class="section-badge-header">
+                <span class="step-number">5</span>
+                <div>
+                  <h2 class="section-title">Comodidades y Reglas de Convivencia</h2>
+                  <p class="section-desc">Selecciona las amenidades disponibles en tu auto.</p>
+                </div>
+              </div>
+
+              <div class="amenities-toggle-grid">
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="❄️ Con A/C" checked />
+                  <span class="chip-content">❄️ Aire Acondicionado</span>
+                </label>
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="🏄 Surf Friendly" checked />
+                  <span class="chip-content">🏄 Espacio para Surfboards</span>
+                </label>
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="🧳 Maletero Amplio" checked />
+                  <span class="chip-content">🧳 Maletero Amplio</span>
+                </label>
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="🚭 Libre de Humo" checked />
+                  <span class="chip-content">🚭 Libre de Humo (No fumadores)</span>
+                </label>
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="🐾 Pet Friendly" />
+                  <span class="chip-content">🐾 Pet Friendly (Mascotas)</span>
+                </label>
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="🎵 Música Relajada" checked />
+                  <span class="chip-content">🎵 Música Relajada</span>
+                </label>
+                <label class="amenity-chip-label">
+                  <input type="checkbox" name="amenity" value="⏱️ Salida Puntual" checked />
+                  <span class="chip-content">⏱️ Salida Puntual</span>
+                </label>
+              </div>
+
+              <!-- Notes & Additional Comments -->
+              <div class="form-group notes-group">
+                <label for="pub-desc-input">Notas adicionales para tus pasajeros (opcional):</label>
+                <textarea 
+                  id="pub-desc-input" 
+                  class="pub-textarea" 
+                  rows="3" 
+                  placeholder="Ej. Salgo puntual desde gasolinera Puma Los Próceres. Espacio para mochilas y tablas. A/C encendido."
+                >Salida puntual. Aire acondicionado disponible y espacio para equipaje mediano.</textarea>
+              </div>
+            </section>
+
+            <!-- Submit Section -->
+            <div class="builder-actions-card">
+              <div class="terms-guarantee">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="#0F8A8B">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                <span>Tu publicación se sincronizará inmediatamente en vivo con la API y el catálogo de viajes.</span>
+              </div>
+
+              <div class="actions-buttons-row">
+                <a href="/" class="btn btn-ghost btn-lg">Cancelar</a>
+                <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-dedicated-publish">
+                  <span class="btn-text">🚀 Publicar Viaje en Rutea</span>
+                  <span class="btn-spinner" style="display: none;">Publicando en la red...</span>
+                </button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- RIGHT COLUMN: Sticky Live Preview Card -->
+        <aside class="publish-preview-column">
+          <div class="preview-sticky-box">
+            <div class="preview-header">
+              <span class="badge badge-sand">👁️ Vista Previa en Vivo</span>
+              <h3>Así verán tu viaje los pasajeros</h3>
+            </div>
+
+            <!-- Dynamic Live Preview Card -->
+            <div class="live-card-container">
+              <article class="ride-card glass-card preview-card-live" id="preview-ride-card">
+                <div class="card-header">
+                  <div class="driver-info">
+                    <div class="driver-avatar-circle" id="preview-avatar">
+                      <span>C</span>
+                    </div>
+                    <div class="driver-meta">
+                      <div class="driver-name-row">
+                        <span class="driver-name" id="preview-driver-name">Tú (Conductor Verificado)</span>
+                        <span class="verified-pill">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="#0F8A8B">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                          </svg>
+                          <span>Verificado</span>
+                        </span>
+                      </div>
+                      <div class="driver-subline">
+                        <span class="rating-badge">★ 5.0</span>
+                        <span class="dot-sep">·</span>
+                        <span class="trips-count">Nuevo viaje</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <span class="badge badge-fresh" id="preview-category-badge">🌊 Ruta Costera</span>
+                </div>
+
+                <div class="route-timeline">
+                  <div class="timeline-step origin-step">
+                    <div class="time-col" id="preview-dep-time">07:00 AM</div>
+                    <div class="marker-col">
+                      <span class="node-ring origin-ring"></span>
+                      <span class="track-line"></span>
+                    </div>
+                    <div class="location-col">
+                      <strong class="location-name" id="preview-origin-text">San Salvador (Multiplaza)</strong>
+                      <span class="location-sub">Punto de encuentro seguro</span>
+                    </div>
+                  </div>
+
+                  <div class="timeline-duration-row">
+                    <span class="duration-badge">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      <span id="preview-duration-badge">45 min directo</span>
+                    </span>
+                  </div>
+
+                  <div class="timeline-step dest-step">
+                    <div class="time-col">Llegada directa</div>
+                    <div class="marker-col">
+                      <span class="node-ring dest-ring"></span>
+                    </div>
+                    <div class="location-col">
+                      <strong class="location-name" id="preview-dest-text">Playa El Tunco, La Libertad</strong>
+                      <span class="location-sub">Destino principal</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Live Notes -->
+                <div class="ride-card-note" id="preview-notes-box">
+                  <span class="note-quote-mark" aria-hidden="true">“</span>
+                  <p class="note-text" id="preview-notes-text">Salida puntual. Aire acondicionado disponible y espacio para equipaje mediano.</p>
+                </div>
+
+                <!-- Vehicle and Amenities -->
+                <div class="card-vehicle-row">
+                  <div class="vehicle-info">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                    <span id="preview-vehicle-text">Toyota Corolla 2023 · P-78219</span>
+                  </div>
+
+                  <div class="amenities-tags" id="preview-amenities-tags">
+                    <span class="amenity-tag">❄️ Con A/C</span>
+                    <span class="amenity-tag">🏄 Surf Friendly</span>
+                    <span class="amenity-tag">🧳 Maletero Amplio</span>
+                  </div>
+                </div>
+
+                <!-- Footer with seats and price -->
+                <div class="card-footer">
+                  <div class="seats-counter">
+                    <div class="seats-icons" id="preview-seats-dots">
+                      <span class="seat-dot seat-free"></span>
+                      <span class="seat-dot seat-free"></span>
+                      <span class="seat-dot seat-free"></span>
+                    </div>
+                    <span class="seats-label">
+                      <strong id="preview-seats-num">3</strong> asientos libres
+                    </span>
+                  </div>
+
+                  <div class="price-action-box">
+                    <div class="price-box">
+                      <span class="price-amount" id="preview-price-display">$2.50</span>
+                      <span class="price-unit">/ persona</span>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-sm" disabled style="opacity: 0.85;">
+                      <span>Reservar Asiento</span>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <!-- Trust & Safety Highlights -->
+            <div class="preview-trust-box">
+              <div class="trust-point">
+                <span class="tp-icon">🛡️</span>
+                <div>
+                  <strong>Pasajeros Verificados</strong>
+                  <p>Solo usuarios con identidad y teléfono validado pueden solicitar asientos.</p>
+                </div>
+              </div>
+              <div class="trust-point">
+                <span class="tp-icon">💬</span>
+                <div>
+                  <strong>Chat Directo & WhatsApp</strong>
+                  <p>Coordinación inmediata de punto de recogida en tiempo real.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+  <AuthModal />
+</Layout>
+
+<!-- Load Leaflet JS inline -->
+<script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+  .publish-page-main {
+    padding: 2rem 0 4.5rem;
+    background: radial-gradient(circle at 10% 20%, rgba(143, 214, 200, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(15, 138, 139, 0.08) 0%, transparent 40%);
+    min-height: 85vh;
+  }
+
+  .publish-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-slate-muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .publish-breadcrumb a {
+    color: var(--color-ocean);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .publish-breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .bc-sep {
+    opacity: 0.5;
+  }
+
+  .bc-current {
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  /* Header */
+  .publish-hero-header {
+    margin-bottom: 2rem;
+  }
+
+  .publish-header-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .publish-header-pill {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: rgba(11, 93, 103, 0.08);
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
+  }
+
+  .publish-main-title {
+    font-size: 2.2rem;
+    font-family: var(--font-display);
+    color: var(--color-slate);
+    line-height: 1.2;
+    margin-bottom: 0.6rem;
+  }
+
+  .publish-main-sub {
+    font-size: 1.05rem;
+    color: var(--color-slate-muted);
+    max-width: 780px;
+    line-height: 1.5;
+  }
+
+  /* 2-Column Layout */
+  .publish-grid-layout {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* Builder Card */
+  .publish-form-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .builder-section {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    padding: 1.75rem;
+    box-shadow: 0 4px 20px rgba(11, 93, 103, 0.04);
+  }
+
+  .section-badge-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(11, 93, 103, 0.08);
+  }
+
+  .step-number {
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary);
+    color: #FFFFFF;
+    font-weight: 800;
+    font-size: 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    color: var(--color-slate);
+    margin: 0 0 0.2rem;
+  }
+
+  .section-desc {
+    font-size: 0.88rem;
+    color: var(--color-slate-muted);
+    margin: 0;
+  }
+
+  /* Route Presets */
+  .route-presets-wrapper {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .presets-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .presets-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .preset-pill {
+    background: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    color: var(--color-slate);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .preset-pill:hover,
+  .preset-pill.active {
+    background: var(--color-ocean);
+    color: #FFFFFF;
+    border-color: var(--color-ocean);
+    box-shadow: 0 3px 10px rgba(15, 138, 139, 0.25);
+  }
+
+  /* Map Toolbar */
+  .map-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    background: var(--color-sand-light);
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .toolbar-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .map-mode-buttons {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .btn-mode {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-slate);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-mode.active {
+    background: var(--color-primary);
+    color: #FFFFFF;
+    border-color: var(--color-primary);
+  }
+
+  .mode-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+
+  .dot-origin { background: #10B981; }
+  .dot-dest { background: #0B5D67; }
+  .dot-stop { background: #F59E0B; }
+
+  /* Map Frame */
+  .map-container-frame {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 2px solid rgba(143, 214, 200, 0.45);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    margin-bottom: 1.25rem;
+  }
+
+  .route-map {
+    z-index: 1;
+  }
+
+  .map-metrics-overlay {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: var(--radius-md);
+    padding: 0.65rem 1.1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+  }
+
+  .metric-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .metric-icon {
+    font-size: 1.3rem;
+  }
+
+  .metric-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--color-slate-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .metric-val {
+    font-size: 0.92rem;
+    color: var(--color-primary);
+    font-weight: 800;
+  }
+
+  .metric-sep {
+    width: 1px;
+    height: 28px;
+    background: rgba(11, 93, 103, 0.15);
+  }
+
+  /* Location Inputs */
+  .location-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .field-card {
+    background: var(--color-sand-light);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .field-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .field-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .field-card label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .pub-input {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+    outline: none;
+    transition: all var(--transition-fast);
+  }
+
+  .pub-input:focus,
+  .pub-select:focus,
+  .pub-textarea:focus {
+    border-color: var(--color-ocean);
+    box-shadow: 0 0 0 3px rgba(143, 214, 200, 0.35);
+  }
+
+  .coord-badge {
+    font-size: 0.72rem;
+    color: var(--color-slate-muted);
+    font-family: monospace;
+    margin-top: 0.15rem;
+  }
+
+  /* Intermediate Stops */
+  .intermediate-stops-wrap {
+    background: rgba(143, 214, 200, 0.1);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    border: 1px dashed rgba(11, 93, 103, 0.2);
+  }
+
+  .stops-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .stops-header label {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .btn-text-action {
+    background: transparent;
+    border: none;
+    color: var(--color-ocean);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  .btn-text-action:hover {
+    text-decoration: underline;
+  }
+
+  .stops-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .stop-row-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #FFFFFF;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+  }
+
+  .stop-badge {
+    background: #F59E0B;
+    color: #FFFFFF;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-full);
+  }
+
+  .stop-input {
+    flex-grow: 1;
+    border: none;
+    outline: none;
+    font-size: 0.88rem;
+    color: var(--color-slate);
+  }
+
+  .btn-remove-stop {
+    background: transparent;
+    border: none;
+    color: #EF4444;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  /* Step 2 Form Rows */
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.85rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .form-group label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .quick-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+  }
+
+  .pill-shortcut {
+    background: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    color: var(--color-slate);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .pill-shortcut:hover,
+  .pill-shortcut.active {
+    background: var(--color-ocean);
+    color: #FFFFFF;
+    border-color: var(--color-ocean);
+  }
+
+  /* Vehicles Visual List */
+  .vehicles-visual-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .vehicle-list-radios {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .vehicle-radio-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--color-sand-light);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1.1rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .vehicle-radio-card:hover {
+    border-color: var(--color-ocean);
+  }
+
+  .vehicle-radio-card.selected {
+    background: rgba(143, 214, 200, 0.2);
+    border-color: var(--color-ocean);
+    box-shadow: 0 4px 15px rgba(15, 138, 139, 0.1);
+  }
+
+  .veh-radio-icon {
+    font-size: 1.8rem;
+  }
+
+  .veh-radio-details {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .veh-radio-details strong {
+    font-size: 0.95rem;
+    color: var(--color-slate);
+  }
+
+  .veh-radio-details span {
+    font-size: 0.8rem;
+    color: var(--color-slate-muted);
+  }
+
+  .veh-radio-capacity {
+    background: #FFFFFF;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+  }
+
+  .new-vehicle-box {
+    background: #F8FAFC;
+    border: 1.5px dashed rgba(11, 93, 103, 0.25);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .new-vehicle-title {
+    font-size: 1rem;
+    color: var(--color-primary);
+    margin: 0 0 1rem;
+  }
+
+  .pub-select {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+    outline: none;
+  }
+
+  /* Price & Calculator */
+  .price-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .currency-symbol {
+    position: absolute;
+    left: 1rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .price-field {
+    padding-left: 2.2rem;
+    padding-right: 6rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .price-unit-tag {
+    position: absolute;
+    right: 1rem;
+    font-size: 0.82rem;
+    color: var(--color-slate-muted);
+    font-weight: 600;
+  }
+
+  .field-hint {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+  }
+
+  .savings-calc-widget {
+    margin-top: 1.25rem;
+    background: linear-gradient(135deg, rgba(143, 214, 200, 0.25) 0%, rgba(15, 138, 139, 0.12) 100%);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-seafoam);
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+  }
+
+  .calc-icon-box {
+    font-size: 2rem;
+  }
+
+  .calc-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .calc-amount-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0.2rem 0;
+  }
+
+  .calc-total-usd {
+    font-size: 1.6rem;
+    font-family: var(--font-display);
+    color: var(--color-primary);
+  }
+
+  .calc-formula-sub {
+    font-size: 0.88rem;
+    color: var(--color-slate-muted);
+    font-weight: 600;
+  }
+
+  .calc-tip {
+    font-size: 0.8rem;
+    color: var(--color-slate-muted);
+    margin: 0;
+  }
+
+  /* Amenities Chips */
+  .amenities-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .amenity-chip-label {
+    cursor: pointer;
+  }
+
+  .amenity-chip-label input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .chip-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-slate);
+    transition: all var(--transition-fast);
+  }
+
+  .amenity-chip-label input:checked + .chip-content {
+    background: var(--color-ocean);
+    color: #FFFFFF;
+    border-color: var(--color-ocean);
+    box-shadow: 0 2px 8px rgba(15, 138, 139, 0.25);
+  }
+
+  .pub-textarea {
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+    outline: none;
+    resize: vertical;
+  }
+
+  /* Actions Card */
+  .builder-actions-card {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    padding: 1.5rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    box-shadow: 0 10px 30px rgba(11, 93, 103, 0.08);
+  }
+
+  .terms-guarantee {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-size: 0.84rem;
+    color: var(--color-slate-muted);
+    max-width: 480px;
+  }
+
+  .actions-buttons-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Alert */
+  .publish-alert {
+    background: #FEF2F2;
+    border: 1px solid #F87171;
+    color: #991B1B;
+    padding: 0.85rem 1.25rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+  }
+
+  .alert-icon {
+    font-size: 1.3rem;
+  }
+
+  .alert-body strong {
+    display: block;
+    font-size: 0.92rem;
+  }
+
+  .alert-body p {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+  }
+
+  /* RIGHT COLUMN: Sticky Preview */
+  .publish-preview-column {
+    position: relative;
+  }
+
+  .preview-sticky-box {
+    position: sticky;
+    top: 90px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .preview-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .preview-header h3 {
+    font-size: 1.15rem;
+    color: var(--color-slate);
+    margin: 0;
+  }
+
+  .preview-card-live {
+    box-shadow: 0 15px 35px rgba(11, 93, 103, 0.12);
+    border: 1.5px solid var(--color-seafoam);
+  }
+
+  .preview-trust-box {
+    background: #FFFFFF;
+    border-radius: var(--radius-md);
+    padding: 1.1rem;
+    border: 1px solid rgba(11, 93, 103, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .trust-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .tp-icon {
+    font-size: 1.2rem;
+  }
+
+  .trust-point strong {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-slate);
+  }
+
+  .trust-point p {
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .publish-grid-layout {
+      grid-template-columns: 1fr;
+    }
+    .preview-sticky-box {
+      position: static;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .location-fields-grid,
+    .form-row-2,
+    .form-row-3 {
+      grid-template-columns: 1fr;
+    }
+    .builder-section {
+      padding: 1.25rem;
+    }
+    .builder-actions-card {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .actions-buttons-row {
+      flex-direction: column;
+    }
+    .actions-buttons-row .btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  import { authService, vehiculosService, viajesService, type PuntoEncuentroRequest } from '../services';
+
+  // State
+  let map: any = null;
+  let originMarker: any = null;
+  let destMarker: any = null;
+  let routeLine: any = null;
+  let intermediateStopMarkers: any[] = [];
+
+  let currentMapMode: 'origin' | 'dest' | 'stop' = 'origin';
+
+  // Coordinates state
+  let originCoords = { lat: 13.6739, lon: -89.2514, name: 'San Salvador (Multiplaza)' };
+  let destCoords = { lat: 13.4938, lon: -89.3853, name: 'Playa El Tunco, La Libertad' };
+  let intermediateStops: { name: string; lat: number; lon: number; desc?: string }[] = [];
+
+  // Driver vehicles state
+  let driverVehicles: any[] = [];
+  let selectedVehicleId: string = '';
+
+  // DOM Elements
+  const mapEl = document.getElementById('route-map');
+  const btnModeOrigin = document.getElementById('btn-mode-origin');
+  const btnModeDest = document.getElementById('btn-mode-dest');
+  const btnModeStop = document.getElementById('btn-mode-stop');
+
+  const originInput = document.getElementById('pub-origin-input') as HTMLInputElement | null;
+  const destInput = document.getElementById('pub-dest-input') as HTMLInputElement | null;
+  const dateInput = document.getElementById('pub-date-input') as HTMLInputElement | null;
+  const timeInput = document.getElementById('pub-time-input') as HTMLInputElement | null;
+  const seatsSelect = document.getElementById('pub-seats-select') as HTMLSelectElement | null;
+  const priceInput = document.getElementById('pub-price-input') as HTMLInputElement | null;
+  const descInput = document.getElementById('pub-desc-input') as HTMLTextAreaElement | null;
+
+  const originCoordBadge = document.getElementById('origin-coord-badge');
+  const destCoordBadge = document.getElementById('dest-coord-badge');
+  const metricDistance = document.getElementById('metric-distance');
+  const metricDuration = document.getElementById('metric-duration');
+
+  const calcTotalDisplay = document.getElementById('calc-total-display');
+  const calcFormulaDisplay = document.getElementById('calc-formula-display');
+
+  // Preview elements
+  const prevOrigin = document.getElementById('preview-origin-text');
+  const prevDest = document.getElementById('preview-dest-text');
+  const prevDepTime = document.getElementById('preview-dep-time');
+  const prevDurationBadge = document.getElementById('preview-duration-badge');
+  const prevCategoryBadge = document.getElementById('preview-category-badge');
+  const prevVehicleText = document.getElementById('preview-vehicle-text');
+  const prevSeatsDots = document.getElementById('preview-seats-dots');
+  const prevSeatsNum = document.getElementById('preview-seats-num');
+  const prevPriceDisplay = document.getElementById('preview-price-display');
+  const prevNotesText = document.getElementById('preview-notes-text');
+  const prevNotesBox = document.getElementById('preview-notes-box');
+  const prevAmenitiesTags = document.getElementById('preview-amenities-tags');
+  const prevDriverName = document.getElementById('preview-driver-name');
+  const prevAvatar = document.getElementById('preview-avatar');
+
+  // Alert elements
+  const globalAlert = document.getElementById('publish-global-alert');
+  const alertText = document.getElementById('publish-alert-text');
+  const alertTitle = document.getElementById('publish-alert-title');
+
+  // 1. Inicialización de Fechas
+  function initDateShortcuts() {
+    if (!dateInput) return;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    dateInput.min = todayStr;
+    dateInput.value = todayStr;
+
+    document.querySelectorAll('#date-quick-pills .pill-shortcut').forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        document.querySelectorAll('#date-quick-pills .pill-shortcut').forEach(p => p.classList.remove('active'));
+        (e.currentTarget as HTMLElement).classList.add('active');
+
+        const days = (e.currentTarget as HTMLElement).getAttribute('data-days');
+        const d = new Date();
+        if (days === 'weekend') {
+          // Próximo sábado
+          const dayOfWeek = d.getDay();
+          const daysToSat = (6 - dayOfWeek + 7) % 7 || 7;
+          d.setDate(d.getDate() + daysToSat);
+        } else {
+          d.setDate(d.getDate() + parseInt(days || '0', 10));
+        }
+        dateInput.value = d.toISOString().split('T')[0];
+        updateLivePreview();
+      });
+    });
+
+    document.querySelectorAll('#time-quick-pills .pill-shortcut').forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        document.querySelectorAll('#time-quick-pills .pill-shortcut').forEach(p => p.classList.remove('active'));
+        (e.currentTarget as HTMLElement).classList.add('active');
+        const t = (e.currentTarget as HTMLElement).getAttribute('data-time');
+        if (t && timeInput) {
+          timeInput.value = t;
+          updateLivePreview();
+        }
+      });
+    });
+  }
+
+  // 2. Inicialización del Mapa Interactivo Leaflet
+  function initLeafletMap() {
+    if (!mapEl || typeof (window as any).L === 'undefined') {
+      setTimeout(initLeafletMap, 150);
+      return;
+    }
+
+    const L = (window as any).L;
+
+    // Crear mapa centrado en El Salvador (San Salvador / La Libertad)
+    map = L.map('route-map', {
+      center: [13.62, -89.30],
+      zoom: 11,
+      zoomControl: true,
+      scrollWheelZoom: true
+    });
+
+    // Capa de mosaico moderna de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Iconos personalizados con diseño costero
+    const originIcon = L.divIcon({
+      className: 'custom-map-marker marker-origin',
+      html: `
+        <div style="background:#10B981;width:34px;height:34px;border-radius:50%;border:3px solid #FFFFFF;box-shadow:0 4px 15px rgba(16,185,129,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;">
+          📍
+        </div>
+      `,
+      iconSize: [34, 34],
+      iconAnchor: [17, 34]
+    });
+
+    const destIcon = L.divIcon({
+      className: 'custom-map-marker marker-dest',
+      html: `
+        <div style="background:#0B5D67;width:34px;height:34px;border-radius:50%;border:3px solid #FFFFFF;box-shadow:0 4px 15px rgba(11,93,103,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;">
+          🏁
+        </div>
+      `,
+      iconSize: [34, 34],
+      iconAnchor: [17, 34]
+    });
+
+    // Marcador Origen draggable
+    originMarker = L.marker([originCoords.lat, originCoords.lon], {
+      icon: originIcon,
+      draggable: true,
+      title: 'Punto de Salida'
+    }).addTo(map);
+
+    originMarker.bindPopup('<strong>📍 Punto de Origen</strong><br>' + originCoords.name);
+
+    originMarker.on('dragend', (e: any) => {
+      const pos = e.target.getLatLng();
+      originCoords.lat = Number(pos.lat.toFixed(4));
+      originCoords.lon = Number(pos.lng.toFixed(4));
+      updateCoordsDisplay();
+      redrawRoutePolyline();
+    });
+
+    // Marcador Destino draggable
+    destMarker = L.marker([destCoords.lat, destCoords.lon], {
+      icon: destIcon,
+      draggable: true,
+      title: 'Punto de Destino'
+    }).addTo(map);
+
+    destMarker.bindPopup('<strong>🏁 Punto de Destino</strong><br>' + destCoords.name);
+
+    destMarker.on('dragend', (e: any) => {
+      const pos = e.target.getLatLng();
+      destCoords.lat = Number(pos.lat.toFixed(4));
+      destCoords.lon = Number(pos.lng.toFixed(4));
+      updateCoordsDisplay();
+      redrawRoutePolyline();
+    });
+
+    // Clic en el mapa según la herramienta activa
+    map.on('click', (e: any) => {
+      const lat = Number(e.latlng.lat.toFixed(4));
+      const lon = Number(e.latlng.lng.toFixed(4));
+
+      if (currentMapMode === 'origin') {
+        originCoords.lat = lat;
+        originCoords.lon = lon;
+        originMarker.setLatLng([lat, lon]);
+        originCoords.name = resolveLocationNameFromCoords(lat, lon, 'Origen personalizado');
+        if (originInput) originInput.value = originCoords.name;
+        originMarker.setPopupContent('<strong>📍 Punto de Origen</strong><br>' + originCoords.name).openPopup();
+      } else if (currentMapMode === 'dest') {
+        destCoords.lat = lat;
+        destCoords.lon = lon;
+        destMarker.setLatLng([lat, lon]);
+        destCoords.name = resolveLocationNameFromCoords(lat, lon, 'Destino personalizado');
+        if (destInput) destInput.value = destCoords.name;
+        destMarker.setPopupContent('<strong>🏁 Punto de Destino</strong><br>' + destCoords.name).openPopup();
+      } else if (currentMapMode === 'stop') {
+        addIntermediateStop(lat, lon, `Parada en km (${lat}, ${lon})`);
+      }
+
+      updateCoordsDisplay();
+      redrawRoutePolyline();
+      updateLivePreview();
+    });
+
+    redrawRoutePolyline();
+  }
+
+  // Trazar línea de ruta en el mapa
+  function redrawRoutePolyline() {
+    if (!map) return;
+    const L = (window as any).L;
+
+    if (routeLine) {
+      map.removeLayer(routeLine);
+    }
+
+    const latlngs = [
+      [originCoords.lat, originCoords.lon],
+      ...intermediateStops.map(s => [s.lat, s.lon]),
+      [destCoords.lat, destCoords.lon]
+    ];
+
+    routeLine = L.polyline(latlngs, {
+      color: '#0F8A8B',
+      weight: 5,
+      opacity: 0.85,
+      dashArray: '8, 8',
+      lineCap: 'round'
+    }).addTo(map);
+
+    // Ajustar límites si es necesario
+    try {
+      map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+    } catch {}
+
+    // Calcular distancia estimada
+    const dist = calculateTotalDistance();
+    if (metricDistance) metricDistance.textContent = `${dist} km`;
+    if (metricDuration) {
+      const mins = Math.max(20, Math.round(dist * 1.3));
+      metricDuration.textContent = `${mins} min directo`;
+    }
+  }
+
+  function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function calculateTotalDistance(): number {
+    let total = 0;
+    const pts = [
+      originCoords,
+      ...intermediateStops,
+      destCoords
+    ];
+    for (let i = 0; i < pts.length - 1; i++) {
+      total += calculateDistanceKm(pts[i].lat, pts[i].lon, pts[i + 1].lat, pts[i + 1].lon);
+    }
+    return Math.round(total * 1.3); // Corrección por trazado vial salvadoreño
+  }
+
+  function updateCoordsDisplay() {
+    if (originCoordBadge) {
+      originCoordBadge.textContent = `📍 Lat: ${originCoords.lat}, Lon: ${originCoords.lon}`;
+    }
+    if (destCoordBadge) {
+      destCoordBadge.textContent = `🏁 Lat: ${destCoords.lat}, Lon: ${destCoords.lon}`;
+    }
+  }
+
+  // Resolver nombre de lugar aproximado
+  function resolveLocationNameFromCoords(lat: number, lon: number, fallback: string): string {
+    if (lat >= 13.48 && lat <= 13.51 && lon >= -89.41 && lon <= -89.36) return 'Playa El Tunco / El Sunzal';
+    if (lat >= 13.48 && lat <= 13.51 && lon >= -89.47 && lon <= -89.42) return 'Playa El Zonte, Chiltiupán';
+    if (lat >= 13.47 && lat <= 13.50 && lon >= -89.33 && lon <= -89.30) return 'Puerto de La Libertad (Malecón)';
+    if (lat >= 13.31 && lat <= 13.36 && lon >= -89.05 && lon <= -88.98) return 'Costa del Sol (Playa San Marcelino)';
+    if (lat >= 13.66 && lat <= 13.69 && lon >= -89.30 && lon <= -89.26) return 'Santa Tecla (Paseo El Carmen)';
+    if (lat >= 13.66 && lat <= 13.69 && lon >= -89.26 && lon <= -89.24) return 'Antiguo Cuscatlán / Multiplaza';
+    if (lat >= 13.68 && lat <= 13.72 && lon >= -89.23 && lon <= -89.18) return 'San Salvador Centro (Metrocentro)';
+    if (lat >= 13.43 && lat <= 13.46 && lon >= -89.08 && lon <= -89.04) return 'Aeropuerto Internacional Monseñor Romero (AOP)';
+    if (lat >= 13.97 && lat <= 14.02 && lon >= -89.58 && lon <= -89.53) return 'Santa Ana Centro / Metrocentro';
+    return fallback;
+  }
+
+  // 3. Modos de Mapa (Origen, Destino, Paradas)
+  btnModeOrigin?.addEventListener('click', () => setMapMode('origin'));
+  btnModeDest?.addEventListener('click', () => setMapMode('dest'));
+  btnModeStop?.addEventListener('click', () => setMapMode('stop'));
+
+  function setMapMode(mode: 'origin' | 'dest' | 'stop') {
+    currentMapMode = mode;
+    [btnModeOrigin, btnModeDest, btnModeStop].forEach(btn => btn?.classList.remove('active'));
+    if (mode === 'origin') btnModeOrigin?.classList.add('active');
+    if (mode === 'dest') btnModeDest?.classList.add('active');
+    if (mode === 'stop') btnModeStop?.classList.add('active');
+  }
+
+  // 4. Paradas Intermedias (Puntos de Encuentro)
+  const stopsListContainer = document.getElementById('stops-list-container');
+  const btnAddStopRow = document.getElementById('btn-add-stop-row');
+
+  btnAddStopRow?.addEventListener('click', () => {
+    // Parada interpolada intermedia
+    const midLat = Number(((originCoords.lat + destCoords.lat) / 2).toFixed(4));
+    const midLon = Number(((originCoords.lon + destCoords.lon) / 2).toFixed(4));
+    addIntermediateStop(midLat, midLon, 'Punto de encuentro intermedio');
+  });
+
+  function addIntermediateStop(lat: number, lon: number, name: string) {
+    if (intermediateStops.length >= 3) {
+      alert('Máximo 3 paradas intermedias para garantizar fluidez en el viaje.');
+      return;
+    }
+
+    const L = (window as any).L;
+    const stopIdx = intermediateStops.length + 1;
+    const stopObj = { name, lat, lon };
+    intermediateStops.push(stopObj);
+
+    // Marcador en mapa
+    const stopIcon = L.divIcon({
+      className: 'custom-map-marker marker-stop',
+      html: `
+        <div style="background:#F59E0B;width:28px;height:28px;border-radius:50%;border:2px solid #FFFFFF;box-shadow:0 4px 10px rgba(245,158,11,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;">
+          ${stopIdx}
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28]
+    });
+
+    const marker = L.marker([lat, lon], {
+      icon: stopIcon,
+      draggable: true,
+      title: `Parada ${stopIdx}`
+    }).addTo(map);
+
+    marker.bindPopup(`<strong>🟡 Parada ${stopIdx}</strong><br>${name}`);
+
+    marker.on('dragend', (e: any) => {
+      const pos = e.target.getLatLng();
+      stopObj.lat = Number(pos.lat.toFixed(4));
+      stopObj.lon = Number(pos.lng.toFixed(4));
+      redrawRoutePolyline();
+    });
+
+    intermediateStopMarkers.push(marker);
+
+    renderStopsList();
+    redrawRoutePolyline();
+  }
+
+  function renderStopsList() {
+    if (!stopsListContainer) return;
+    stopsListContainer.innerHTML = '';
+
+    intermediateStops.forEach((stop, idx) => {
+      const row = document.createElement('div');
+      row.className = 'stop-row-item';
+      row.innerHTML = `
+        <span class="stop-badge">${idx + 1}</span>
+        <input type="text" class="stop-input" value="${stop.name}" placeholder="Nombre de la parada (ej. Gasolinera Texaco)" />
+        <span style="font-size:11px;color:#64748B;">(${stop.lat}, ${stop.lon})</span>
+        <button type="button" class="btn-remove-stop" title="Eliminar parada">&times;</button>
+      `;
+
+      const input = row.querySelector('.stop-input') as HTMLInputElement;
+      input.addEventListener('input', () => {
+        stop.name = input.value;
+      });
+
+      const removeBtn = row.querySelector('.btn-remove-stop') as HTMLButtonElement;
+      removeBtn.addEventListener('click', () => {
+        removeIntermediateStop(idx);
+      });
+
+      stopsListContainer.appendChild(row);
+    });
+  }
+
+  function removeIntermediateStop(index: number) {
+    if (intermediateStopMarkers[index] && map) {
+      map.removeLayer(intermediateStopMarkers[index]);
+    }
+    intermediateStops.splice(index, 1);
+    intermediateStopMarkers.splice(index, 1);
+    renderStopsList();
+    redrawRoutePolyline();
+  }
+
+  // 5. Atajos de Rutas Frecuentes
+  document.querySelectorAll('.preset-pill').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
+      (e.currentTarget as HTMLElement).classList.add('active');
+
+      const preset = (e.currentTarget as HTMLElement).getAttribute('data-preset');
+      applyRoutePreset(preset);
+    });
+  });
+
+  function applyRoutePreset(preset: string | null) {
+    if (preset === 'tunco') {
+      originCoords = { lat: 13.6739, lon: -89.2514, name: 'San Salvador (Multiplaza)' };
+      destCoords = { lat: 13.4938, lon: -89.3853, name: 'Playa El Tunco, La Libertad' };
+    } else if (preset === 'zonte') {
+      originCoords = { lat: 13.6769, lon: -89.2797, name: 'Santa Tecla (Paseo El Carmen)' };
+      destCoords = { lat: 13.4983, lon: -89.4447, name: 'Playa El Zonte, Chiltiupán' };
+    } else if (preset === 'sol') {
+      originCoords = { lat: 13.6989, lon: -89.1914, name: 'San Salvador (Metrocentro)' };
+      destCoords = { lat: 13.3333, lon: -89.0167, name: 'Costa del Sol (Playa San Marcelino)' };
+    } else if (preset === 'santaana') {
+      originCoords = { lat: 13.9942, lon: -89.5597, name: 'Santa Ana (Metrocentro)' };
+      destCoords = { lat: 13.6989, lon: -89.1914, name: 'San Salvador Centro' };
+    } else if (preset === 'aeropuerto') {
+      originCoords = { lat: 13.6739, lon: -89.2514, name: 'San Salvador (Multiplaza)' };
+      destCoords = { lat: 13.4409, lon: -89.0557, name: 'Aeropuerto Internacional Monseñor Romero (AOP)' };
+    }
+
+    if (originInput) originInput.value = originCoords.name;
+    if (destInput) destInput.value = destCoords.name;
+
+    if (originMarker) originMarker.setLatLng([originCoords.lat, originCoords.lon]).setPopupContent('<strong>📍 Punto de Origen</strong><br>' + originCoords.name);
+    if (destMarker) destMarker.setLatLng([destCoords.lat, destCoords.lon]).setPopupContent('<strong>🏁 Punto de Destino</strong><br>' + destCoords.name);
+
+    // Limpiar paradas intermedias de presets anteriores
+    intermediateStopMarkers.forEach(m => map && map.removeLayer(m));
+    intermediateStops = [];
+    intermediateStopMarkers = [];
+    renderStopsList();
+
+    updateCoordsDisplay();
+    redrawRoutePolyline();
+    updateLivePreview();
+  }
+
+  // 6. Carga de Vehículos del Conductor
+  const driverVehiclesContainer = document.getElementById('driver-vehicles-container');
+  const newVehicleBox = document.getElementById('new-vehicle-box');
+
+  async function loadDriverVehicles() {
+    if (!driverVehiclesContainer) return;
+    try {
+      driverVehicles = await vehiculosService.getMisVehiculos();
+      renderDriverVehicles();
+    } catch {
+      renderDriverVehicles();
+    }
+  }
+
+  function renderDriverVehicles() {
+    if (!driverVehiclesContainer) return;
+    driverVehiclesContainer.innerHTML = '';
+
+    if (driverVehicles && driverVehicles.length > 0) {
+      driverVehicles.forEach((veh, idx) => {
+        const isDefault = idx === 0;
+        if (isDefault) selectedVehicleId = veh.id;
+
+        const card = document.createElement('div');
+        card.className = `vehicle-radio-card ${isDefault ? 'selected' : ''}`;
+        card.setAttribute('data-veh-id', veh.id);
+        card.innerHTML = `
+          <div class="veh-radio-icon">🚘</div>
+          <div class="veh-radio-details">
+            <strong>${veh.marca} ${veh.modelo} (${veh.anio || 2023})</strong>
+            <span>Placas: <code>${veh.placa}</code> · Color: ${veh.color || 'Blanco'}</span>
+          </div>
+          <div class="veh-radio-capacity">
+            ${veh.capacidadPasajeros} pasajeros
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.vehicle-radio-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedVehicleId = veh.id;
+          if (newVehicleBox) newVehicleBox.style.display = 'none';
+          updateLivePreview();
+        });
+
+        driverVehiclesContainer.appendChild(card);
+      });
+
+      // Opción de registrar otro auto
+      const newCard = document.createElement('div');
+      newCard.className = 'vehicle-radio-card';
+      newCard.setAttribute('data-veh-id', 'new');
+      newCard.innerHTML = `
+        <div class="veh-radio-icon">➕</div>
+        <div class="veh-radio-details">
+          <strong>Registrar otro auto</strong>
+          <span>Añadir un vehículo nuevo con placas salvadoreñas</span>
+        </div>
+      `;
+      newCard.addEventListener('click', () => {
+        document.querySelectorAll('.vehicle-radio-card').forEach(c => c.classList.remove('selected'));
+        newCard.classList.add('selected');
+        selectedVehicleId = 'new';
+        if (newVehicleBox) newVehicleBox.style.display = 'block';
+        updateLivePreview();
+      });
+
+      driverVehiclesContainer.appendChild(newCard);
+    } else {
+      // No hay vehículos aún: mostrar formulario de nuevo auto
+      selectedVehicleId = 'new';
+      if (newVehicleBox) newVehicleBox.style.display = 'block';
+      driverVehiclesContainer.innerHTML = `
+        <div style="font-size:0.85rem;color:#0F8A8B;font-weight:700;margin-bottom:0.5rem;">
+          ✨ Registraremos tu primer vehículo junto con la publicación de este viaje:
+        </div>
+      `;
+    }
+    updateLivePreview();
+  }
+
+  // 7. Calculadora de Aporte y Amortización
+  seatsSelect?.addEventListener('change', updateLivePreview);
+  priceInput?.addEventListener('input', updateLivePreview);
+  originInput?.addEventListener('input', () => {
+    originCoords.name = originInput.value;
+    updateLivePreview();
+  });
+  destInput?.addEventListener('input', () => {
+    destCoords.name = destInput.value;
+    updateLivePreview();
+  });
+  descInput?.addEventListener('input', updateLivePreview);
+  document.querySelectorAll('input[name="amenity"]').forEach(cb => {
+    cb.addEventListener('change', updateLivePreview);
+  });
+
+  function updateLivePreview() {
+    const originText = originInput?.value.trim() || 'San Salvador';
+    const destText = destInput?.value.trim() || 'La Libertad';
+    const timeVal = timeInput?.value || '07:00';
+    const seats = parseInt(seatsSelect?.value || '3', 10);
+    const price = parseFloat(priceInput?.value || '2.50');
+    const descText = descInput?.value.trim() || '';
+
+    // Actualizar vista previa
+    if (prevOrigin) prevOrigin.textContent = originText;
+    if (prevDest) prevDest.textContent = destText;
+
+    // Formatear hora (12h)
+    let formattedTime = timeVal;
+    if (timeVal.length >= 5) {
+      const parts = timeVal.split(':');
+      const h = parseInt(parts[0], 10);
+      const m = parts[1];
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      formattedTime = `${String(h12).padStart(2, '0')}:${m} ${ampm}`;
+    }
+    if (prevDepTime) prevDepTime.textContent = formattedTime;
+
+    // Categoría
+    const combined = `${originText} ${destText}`.toLowerCase();
+    const isCoast = /tunco|libertad|sol|playa|zonte|sunzal|costa|mar/i.test(combined);
+    if (prevCategoryBadge) {
+      prevCategoryBadge.textContent = isCoast ? '🌊 Ruta Costera' : '⚡ Ruta Diaria';
+      prevCategoryBadge.className = isCoast ? 'badge badge-fresh' : 'badge badge-secure';
+    }
+
+    // Vehículo
+    if (prevVehicleText) {
+      if (selectedVehicleId && selectedVehicleId !== 'new') {
+        const v = driverVehicles.find(x => x.id === selectedVehicleId);
+        if (v) prevVehicleText.textContent = `${v.marca} ${v.modelo} · ${v.placa}`;
+      } else {
+        const brand = (document.getElementById('new-veh-brand') as HTMLInputElement)?.value || 'Toyota';
+        const model = (document.getElementById('new-veh-model') as HTMLInputElement)?.value || 'Corolla';
+        const plate = (document.getElementById('new-veh-plate') as HTMLInputElement)?.value || 'P-78219';
+        prevVehicleText.textContent = `${brand} ${model} · ${plate}`;
+      }
+    }
+
+    // Puntos de asientos
+    if (prevSeatsDots) {
+      prevSeatsDots.innerHTML = Array.from({ length: seats })
+        .map(() => '<span class="seat-dot seat-free"></span>')
+        .join('');
+    }
+    if (prevSeatsNum) prevSeatsNum.textContent = String(seats);
+
+    // Precio
+    if (prevPriceDisplay) prevPriceDisplay.textContent = `$${price.toFixed(2)}`;
+
+    // Calculadora
+    const totalCalc = (seats * price).toFixed(2);
+    if (calcTotalDisplay) calcTotalDisplay.textContent = `$${totalCalc}`;
+    if (calcFormulaDisplay) calcFormulaDisplay.textContent = `(${seats} asientos × $${price.toFixed(2)})`;
+
+    // Notas
+    if (prevNotesText && prevNotesBox) {
+      if (descText) {
+        prevNotesText.textContent = descText;
+        prevNotesBox.style.display = 'flex';
+      } else {
+        prevNotesBox.style.display = 'none';
+      }
+    }
+
+    // Amenidades tags
+    if (prevAmenitiesTags) {
+      const checkedBoxes = Array.from(document.querySelectorAll('input[name="amenity"]:checked')) as HTMLInputElement[];
+      prevAmenitiesTags.innerHTML = checkedBoxes
+        .slice(0, 3)
+        .map(cb => `<span class="amenity-tag">${cb.value}</span>`)
+        .join(' ');
+    }
+
+    // Driver user info
+    const stored = authService.getStoredUser();
+    if (stored) {
+      if (prevDriverName) prevDriverName.textContent = `${stored.nombre} (Conductor Verificado)`;
+      if (prevAvatar) prevAvatar.textContent = stored.nombre.charAt(0).toUpperCase();
+    }
+  }
+
+  // 8. Envío y Publicación a la API
+  const publishForm = document.getElementById('dedicated-publish-form');
+  const submitBtn = document.getElementById('btn-submit-dedicated-publish') as HTMLButtonElement | null;
+
+  function showAlert(title: string, msg: string) {
+    if (globalAlert && alertTitle && alertText) {
+      alertTitle.textContent = title;
+      alertText.textContent = msg;
+      globalAlert.style.display = 'flex';
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+    }
+  }
+
+  function hideAlert() {
+    if (globalAlert) globalAlert.style.display = 'none';
+  }
+
+  publishForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    // Requisito estricto de autenticación
+    if (!authService.isAuthenticated()) {
+      sessionStorage.setItem('pending_action', 'publish_ride');
+      authService.requireAuth('publicar un viaje como conductor');
+      return;
+    }
+
+    const origin = originInput?.value.trim();
+    const destination = destInput?.value.trim();
+    const date = dateInput?.value;
+    const time = timeInput?.value;
+    const seats = parseInt(seatsSelect?.value || '3', 10);
+    const price = parseFloat(priceInput?.value || '2.50');
+    const desc = descInput?.value.trim() || 'Ruta compartida verificada en Rutea';
+
+    if (!origin || !destination) {
+      showAlert('Ruta Incompleta', 'Por favor ingresa tanto el punto de origen como de destino.');
+      return;
+    }
+
+    if (!date) {
+      showAlert('Fecha Requerida', 'Por favor selecciona la fecha de salida del viaje.');
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (date < todayStr) {
+      showAlert('Fecha Inválida', 'La fecha de salida no puede ser anterior al día de hoy.');
+      return;
+    }
+
+    if (!time) {
+      showAlert('Hora Requerida', 'Por favor selecciona la hora de salida.');
+      return;
+    }
+
+    // Estado del botón
+    const btnText = submitBtn?.querySelector('.btn-text') as HTMLElement | null;
+    const btnSpinner = submitBtn?.querySelector('.btn-spinner') as HTMLElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+    if (btnText && btnSpinner) {
+      btnText.style.display = 'none';
+      btnSpinner.style.display = 'inline';
+    }
+
+    try {
+      let finalVehiculoId = selectedVehicleId;
+
+      // Si seleccionó un vehículo existente, validar capacidad
+      if (finalVehiculoId && finalVehiculoId !== 'new') {
+        const found = driverVehicles.find(v => v.id === finalVehiculoId);
+        if (found && found.capacidadPasajeros < seats) {
+          showAlert(
+            'Capacidad Insuficiente',
+            `Tu auto seleccionado (${found.marca} ${found.modelo}) tiene capacidad para ${found.capacidadPasajeros} pasajeros, pero estás ofreciendo ${seats} asientos. Reduce los asientos o registra un auto con más cupos.`
+          );
+          restoreButton();
+          return;
+        }
+      }
+
+      // Si necesita registrar un vehículo nuevo
+      if (!finalVehiculoId || finalVehiculoId === 'new') {
+        const brand = (document.getElementById('new-veh-brand') as HTMLInputElement)?.value.trim() || 'Toyota';
+        const model = (document.getElementById('new-veh-model') as HTMLInputElement)?.value.trim() || 'Corolla';
+        const year = parseInt((document.getElementById('new-veh-year') as HTMLInputElement)?.value || '2023', 10);
+        const color = (document.getElementById('new-veh-color') as HTMLInputElement)?.value.trim() || 'Blanco';
+        const capacity = parseInt((document.getElementById('new-veh-capacity') as HTMLSelectElement)?.value || '4', 10);
+        const plateInput = (document.getElementById('new-veh-plate') as HTMLInputElement)?.value.trim() || `P-${Math.floor(100000 + Math.random() * 899999)}`;
+
+        const nuevoVehiculo = await vehiculosService.registrarVehiculo({
+          marca: brand.slice(0, 50),
+          modelo: model.slice(0, 50),
+          anio: year,
+          color: color.slice(0, 30),
+          tipo: 'SEDAN',
+          placa: plateInput.toUpperCase().slice(0, 20),
+          capacidadPasajeros: Math.max(capacity, seats, 4)
+        });
+
+        finalVehiculoId = nuevoVehiculo.id;
+      }
+
+      // Paradas intermedias formateadas para el backend
+      const puntosEncuentroDto: PuntoEncuentroRequest[] = intermediateStops.map((st, idx) => ({
+        nombre: st.name.slice(0, 150),
+        descripcion: st.desc || 'Parada en ruta',
+        latitud: st.lat,
+        longitud: st.lon,
+        orden: idx + 1,
+        permiteSubida: true,
+        permiteBajada: true
+      }));
+
+      // Publicar viaje en Spring Boot PostGIS
+      const viajeCreado = await viajesService.publicarViaje({
+        vehiculoId: finalVehiculoId,
+        origenNombre: origin,
+        origenLat: originCoords.lat,
+        origenLon: originCoords.lon,
+        destinoNombre: destination,
+        destinoLat: destCoords.lat,
+        destinoLon: destCoords.lon,
+        fechaSalida: date,
+        horaSalida: time,
+        cuposTotales: seats,
+        cuposDisponibles: seats,
+        tarifaAproximada: price,
+        descripcion: desc,
+        puntosEncuentro: puntosEncuentroDto.length > 0 ? puntosEncuentroDto : undefined
+      });
+
+      // Notificar éxito y redirigir al feed
+      alert('¡Viaje publicado exitosamente en la plataforma Rutea!');
+      window.location.href = '/#buscar';
+
+    } catch (err: any) {
+      console.error('Error al publicar viaje:', err);
+      let msg = 'No se pudo registrar el viaje en el servidor.';
+      if (err?.data?.message) {
+        msg = err.data.message;
+      } else if (err?.data?.validationErrors) {
+        msg = Object.values(err.data.validationErrors).join(', ');
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      showAlert('Error al Publicar Viaje', msg);
+    } finally {
+      restoreButton();
+    }
+  });
+
+  function restoreButton() {
+    if (submitBtn) submitBtn.disabled = false;
+    const btnText = submitBtn?.querySelector('.btn-text') as HTMLElement | null;
+    const btnSpinner = submitBtn?.querySelector('.btn-spinner') as HTMLElement | null;
+    if (btnText && btnSpinner) {
+      btnText.style.display = 'inline';
+      btnSpinner.style.display = 'none';
+    }
+  }
+
+  // Listener para cuando el usuario se loguea en AuthModal
+  window.addEventListener('auth-state-changed', ((e: CustomEvent) => {
+    if (e.detail?.user) {
+      loadDriverVehicles();
+      updateLivePreview();
+    }
+  }) as EventListener);
+
+  // Inicializar al cargar
+  initDateShortcuts();
+  initLeafletMap();
+  loadDriverVehicles();
+  updateLivePreview();
+</script>

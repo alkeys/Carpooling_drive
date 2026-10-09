@@ -63,6 +63,13 @@ public class JpaMensajeriaAdapter implements MensajeriaRepositoryPort {
     }
 
     @Override
+    public List<Conversacion> findAllConversaciones() {
+        return conversacionRepository.findAllByOrderByCreadoEnDesc().stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
     public void agregarParticipante(UUID conversacionId, UUID usuarioId) {
         ParticipanteConversacionId id = new ParticipanteConversacionId(conversacionId, usuarioId);
         if (!participanteRepository.existsById(id)) {
@@ -100,6 +107,17 @@ public class JpaMensajeriaAdapter implements MensajeriaRepositoryPort {
         return mensajeRepository.findByConversacionIdOrderByEnviadoEnAsc(conversacionId).stream()
             .map(this::toDomain)
             .toList();
+    }
+
+    @Override
+    public Optional<Mensaje> findUltimoMensajePorConversacionId(UUID conversacionId) {
+        return mensajeRepository.findFirstByConversacionIdOrderByEnviadoEnDesc(conversacionId)
+            .map(this::toDomain);
+    }
+
+    @Override
+    public long countMensajesPorConversacionId(UUID conversacionId) {
+        return mensajeRepository.countByConversacionId(conversacionId);
     }
 
     private Conversacion toDomain(JpaConversacion jpa) {

@@ -1,0 +1,481 @@
+---
+// TripChatModal.astro - Modal interactivo de mensajería y chat grupal por viaje
+---
+
+<div class="modal-backdrop" id="trip-chat-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
+  <div class="chat-modal-container glass-card">
+    <!-- Header -->
+    <div class="chat-modal-header">
+      <div class="chat-modal-title-wrap">
+        <div class="chat-modal-badge-row">
+          <span class="badge badge-fresh" id="modal-chat-route-badge">Ruta Costera</span>
+          <span class="chat-modal-status-pill" id="modal-chat-ws-status">
+            <span class="chat-modal-dot"></span>
+            <span id="modal-chat-ws-text">En vivo</span>
+          </span>
+        </div>
+        <h3 id="chat-modal-title">Chat de Coordinación y Soporte</h3>
+        <span class="chat-modal-sub" id="modal-chat-driver-label">Conductor: --</span>
+      </div>
+      <button type="button" class="chat-modal-close" id="btn-close-trip-chat" aria-label="Cerrar chat">&times;</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="chat-modal-body" id="modal-chat-messages">
+      <div class="chat-empty-hint">
+        <p>Cargando mensajes del viaje...</p>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <div class="chat-modal-footer">
+      <form class="chat-modal-form" id="form-trip-chat-send" onsubmit="return false;">
+        <input 
+          type="text" 
+          id="input-trip-chat-msg" 
+          class="chat-modal-input" 
+          placeholder="Escribe un mensaje al conductor o a soporte..." 
+          autocomplete="off"
+          required 
+        />
+        <button type="submit" class="btn btn-primary btn-sm chat-modal-send-btn" id="btn-trip-chat-send">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          <span>Enviar</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .chat-modal-container {
+    background: #FFFFFF;
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 540px;
+    height: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(15, 138, 139, 0.2);
+    overflow: hidden;
+    position: relative;
+    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes modalPop {
+    from { transform: scale(0.96) translateY(10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .chat-modal-header {
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid rgba(15, 138, 139, 0.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #FAF9F6;
+  }
+
+  .chat-modal-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .chat-modal-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-ocean);
+    background: rgba(15, 138, 139, 0.1);
+    padding: 0.15rem 0.55rem;
+    border-radius: var(--radius-full);
+  }
+
+  .chat-modal-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+  }
+
+  .chat-modal-header h3 {
+    margin: 0;
+    font-size: 1.12rem;
+    font-family: var(--font-display);
+    color: var(--color-slate);
+  }
+
+  .chat-modal-sub {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+  }
+
+  .chat-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .chat-modal-close:hover {
+    color: var(--color-slate);
+  }
+
+  .chat-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem;
+    background: #FAF9F6;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    scroll-behavior: smooth;
+  }
+
+  .chat-empty-hint {
+    margin: auto;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--color-slate-muted);
+    padding: 2rem 1rem;
+  }
+
+  .chat-bubble-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 82%;
+  }
+
+  .chat-bubble-row.bubble-mine {
+    align-self: flex-end;
+  }
+
+  .chat-bubble-row.bubble-other {
+    align-self: flex-start;
+  }
+
+  .chat-modal-bubble {
+    padding: 0.7rem 0.95rem;
+    border-radius: 14px;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    word-break: break-word;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+
+  .chat-modal-bubble.bubble-mine-style {
+    background: linear-gradient(135deg, #0B5D67 0%, #0F8A8B 100%);
+    color: white;
+    border-bottom-right-radius: 2px;
+  }
+
+  .chat-modal-bubble.bubble-driver-style {
+    background: #FFFFFF;
+    border: 1px solid #8FD6C8;
+    color: var(--color-slate);
+    border-bottom-left-radius: 2px;
+  }
+
+  .chat-modal-bubble.bubble-passenger-style {
+    background: #FFFFFF;
+    border: 1px solid rgba(15, 138, 139, 0.15);
+    color: var(--color-slate);
+    border-bottom-left-radius: 2px;
+  }
+
+  .chat-modal-bubble.bubble-admin-style {
+    background: #E6F7F6;
+    border: 1px solid #0F8A8B;
+    color: #0B5D67;
+    border-bottom-left-radius: 2px;
+  }
+
+  .chat-bubble-sender {
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .bubble-mine-style .chat-bubble-sender {
+    color: #8FD6C8;
+  }
+
+  .chat-bubble-time {
+    font-size: 0.65rem;
+    margin-top: 0.25rem;
+    text-align: right;
+    opacity: 0.75;
+  }
+
+  .chat-modal-footer {
+    padding: 0.85rem 1.2rem;
+    background: white;
+    border-top: 1px solid rgba(15, 138, 139, 0.12);
+  }
+
+  .chat-modal-form {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .chat-modal-input {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    border: 1px solid rgba(15, 138, 139, 0.25);
+    border-radius: var(--radius-full);
+    font-size: 0.86rem;
+    outline: none;
+    transition: var(--transition-fast);
+  }
+
+  .chat-modal-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(11, 93, 103, 0.12);
+  }
+
+  .chat-modal-send-btn {
+    border-radius: var(--radius-full);
+    padding: 0.65rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+</style>
+
+<script>
+  import { 
+    authService, 
+    mensajeriaService, 
+    StompChatClient,
+    type MensajeResponse 
+  } from '../services';
+
+  let currentChatTripId = '';
+  let currentConversationId = '';
+  let tripChatClient: StompChatClient | null = null;
+  let chatUnsubscribe: (() => void) | null = null;
+  let messagesList: MensajeResponse[] = [];
+
+  const modal = document.getElementById('trip-chat-modal');
+  const btnClose = document.getElementById('btn-close-trip-chat');
+  const messagesBox = document.getElementById('modal-chat-messages');
+  const inputMsg = document.getElementById('input-trip-chat-msg') as HTMLInputElement | null;
+  const formChat = document.getElementById('form-trip-chat-send');
+  const routeBadge = document.getElementById('modal-chat-route-badge');
+  const driverLabel = document.getElementById('modal-chat-driver-label');
+  const wsText = document.getElementById('modal-chat-ws-text');
+
+  function escapeHtml(str: string): string {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatTime(iso: string): string {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  }
+
+  function scrollChatToBottom() {
+    if (messagesBox) {
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+  }
+
+  function renderMessages() {
+    if (!messagesBox) return;
+    if (messagesList.length === 0) {
+      messagesBox.innerHTML = `
+        <div class="chat-empty-hint">
+          <p>💬 Sala de conversación iniciada.</p>
+          <span style="font-size: 0.78rem; opacity: 0.8;">Escribe tu consulta para coordinar detalles con el conductor y soporte.</span>
+        </div>
+      `;
+      return;
+    }
+
+    const currentUserId = authService.getStoredUser()?.id;
+
+    messagesBox.innerHTML = messagesList.map(m => {
+      const isMine = m.remitenteId === currentUserId;
+      const isAdmin = m.remitenteRol === 'ADMIN';
+      const isConductor = m.remitenteRol === 'CONDUCTOR';
+
+      let bubbleClass = 'bubble-passenger-style';
+      let roleLabel = `👤 ${escapeHtml(m.remitenteNombre || 'Pasajero')}`;
+
+      if (isMine) {
+        bubbleClass = 'bubble-mine-style';
+        roleLabel = 'Tú';
+      } else if (isAdmin) {
+        bubbleClass = 'bubble-admin-style';
+        roleLabel = '🛡️ Soporte Rutea';
+      } else if (isConductor) {
+        bubbleClass = 'bubble-driver-style';
+        roleLabel = `🚗 Conductor (${escapeHtml(m.remitenteNombre || 'Conductor')})`;
+      }
+
+      return `
+        <div class="chat-bubble-row ${isMine ? 'bubble-mine' : 'bubble-other'}" data-msg-id="${m.id}">
+          <div class="chat-modal-bubble ${bubbleClass}">
+            <div class="chat-bubble-sender">
+              <span>${roleLabel}</span>
+            </div>
+            <div class="chat-bubble-text">${escapeHtml(m.contenido)}</div>
+            <div class="chat-bubble-time">${formatTime(m.enviadoEn)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    scrollChatToBottom();
+  }
+
+  async function openTripChat(tripId: string, origin?: string, dest?: string, driver?: string) {
+    const user = authService.getStoredUser();
+    if (!user) {
+      window.dispatchEvent(new CustomEvent('request-auth-required', {
+        detail: { action: 'abrir el chat del viaje', message: 'Inicia sesión para chatear con el conductor y soporte.' }
+      }));
+      return;
+    }
+
+    currentChatTripId = tripId;
+    if (routeBadge && origin && dest) {
+      routeBadge.textContent = `${origin} ➔ ${dest}`;
+    }
+    if (driverLabel && driver) {
+      driverLabel.textContent = `Conductor: ${driver}`;
+    }
+
+    if (modal) modal.style.display = 'flex';
+    if (messagesBox) {
+      messagesBox.innerHTML = '<div class="chat-empty-hint"><p>Cargando mensajes del viaje...</p></div>';
+    }
+
+    try {
+      // 1. Obtener o crear conversación
+      const conv = await mensajeriaService.obtenerOCrearPorViaje(tripId);
+      currentConversationId = conv.id;
+
+      // 2. Obtener historial
+      messagesList = await mensajeriaService.obtenerMensajes(conv.id);
+      renderMessages();
+
+      // 3. Conectar WebSocket STOMP
+      const token = authService.getToken();
+      if (tripChatClient) {
+        tripChatClient.disconnect();
+      }
+
+      tripChatClient = mensajeriaService.crearWebSocketClient(token, (status) => {
+        if (!wsText) return;
+        wsText.textContent = status === 'CONNECTED' ? 'En vivo' : status === 'CONNECTING' ? 'Conectando...' : 'Sondeo';
+      });
+
+      tripChatClient.connect();
+
+      if (chatUnsubscribe) chatUnsubscribe();
+      chatUnsubscribe = tripChatClient.subscribe(`/topic/conversaciones/${conv.id}`, (newMsg) => {
+        if (!messagesList.some(m => m.id === newMsg.id)) {
+          messagesList.push(newMsg);
+          renderMessages();
+        }
+      });
+    } catch (err: any) {
+      if (messagesBox) {
+        messagesBox.innerHTML = `<div class="chat-empty-hint"><p>Error al abrir chat: ${err?.message || 'Revisa tu conexión'}</p></div>`;
+      }
+    }
+  }
+
+  function closeTripChat() {
+    if (modal) modal.style.display = 'none';
+    if (chatUnsubscribe) {
+      chatUnsubscribe();
+      chatUnsubscribe = null;
+    }
+    if (tripChatClient) {
+      tripChatClient.disconnect();
+      tripChatClient = null;
+    }
+    currentChatTripId = '';
+    currentConversationId = '';
+    messagesList = [];
+  }
+
+  async function sendChatMessage() {
+    if (!currentConversationId || !inputMsg) return;
+    const text = inputMsg.value.trim();
+    if (!text) return;
+
+    inputMsg.value = '';
+    inputMsg.focus();
+
+    try {
+      const enviado = await mensajeriaService.enviarMensaje(currentConversationId, text);
+      if (!messagesList.some(m => m.id === enviado.id)) {
+        messagesList.push(enviado);
+        renderMessages();
+      }
+    } catch (err: any) {
+      alert('Error al enviar mensaje: ' + (err?.data?.message || err?.message));
+    }
+  }
+
+  // Event Listeners
+  btnClose?.addEventListener('click', closeTripChat);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeTripChat();
+  });
+
+  formChat?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendChatMessage();
+  });
+
+  // Delegación de eventos para botones de chat en tarjetas de viajes (estáticas o dinámicas)
+  document.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement)?.closest('.chat-ride-btn') as HTMLElement | null;
+    if (target) {
+      const tripId = target.getAttribute('data-ride-id');
+      const origin = target.getAttribute('data-origin') || '';
+      const dest = target.getAttribute('data-dest') || '';
+      const driver = target.getAttribute('data-driver') || '';
+      if (tripId) {
+        openTripChat(tripId, origin, dest, driver);
+      }
+    }
+  });
+
+  // Evento personalizado
+  window.addEventListener('open-trip-chat' as any, ((e: CustomEvent) => {
+    if (e.detail?.tripId) {
+      openTripChat(e.detail.tripId, e.detail.origin, e.detail.dest, e.detail.driver);
+    }
+  }) as EventListener);
+</script>

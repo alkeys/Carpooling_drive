@@ -17,12 +17,15 @@ import com.carpooling.sv.v1.mensajeria.application.port.in.CrearOObtenerConversa
 import com.carpooling.sv.v1.mensajeria.application.port.in.EnviarMensajeCase;
 import com.carpooling.sv.v1.mensajeria.application.port.in.GetConversacionesUsuarioCase;
 import com.carpooling.sv.v1.mensajeria.application.port.in.GetMensajesConversacionCase;
+import com.carpooling.sv.v1.mensajeria.application.service.MensajeriaService;
 import com.carpooling.sv.v1.mensajeria.domain.Conversacion;
 import com.carpooling.sv.v1.mensajeria.domain.Mensaje;
+import com.carpooling.sv.v1.mensajeria.infra.adapter.in.web.dto.ConversacionAdminResponse;
 import com.carpooling.sv.v1.mensajeria.infra.adapter.in.web.dto.ConversacionResponse;
 import com.carpooling.sv.v1.mensajeria.infra.adapter.in.web.dto.MensajeEnviarRequest;
 import com.carpooling.sv.v1.mensajeria.infra.adapter.in.web.dto.MensajeResponse;
 import com.carpooling.sv.v1.shared.security.SecurityContextHelper;
+import com.carpooling.sv.v1.usuario.application.port.out.UsuarioRepositoryPort;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -32,7 +35,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/conversaciones")
-@Tag(name = "Mensajería y Chat", description = "Chat grupal por viaje y mensajería entre conductor y pasajeros confirmados")
+@Tag(name = "Mensajería y Chat", description = "Chat grupal por viaje y mensajería entre conductor, pasajeros y soporte administrativo")
 @SecurityRequirement(name = "bearerAuth")
 public class MensajeriaController {
 
@@ -40,6 +43,8 @@ public class MensajeriaController {
     private final EnviarMensajeCase enviarMensajeCase;
     private final GetMensajesConversacionCase getMensajesConversacionCase;
     private final GetConversacionesUsuarioCase getConversacionesUsuarioCase;
+    private final MensajeriaService mensajeriaService;
+    private final UsuarioRepositoryPort usuarioRepositoryPort;
     private final SecurityContextHelper securityHelper;
 
     public MensajeriaController(
@@ -47,12 +52,24 @@ public class MensajeriaController {
             EnviarMensajeCase enviarMensajeCase,
             GetMensajesConversacionCase getMensajesConversacionCase,
             GetConversacionesUsuarioCase getConversacionesUsuarioCase,
+            MensajeriaService mensajeriaService,
+            UsuarioRepositoryPort usuarioRepositoryPort,
             SecurityContextHelper securityHelper) {
         this.crearOObtenerConversacionViajeCase = crearOObtenerConversacionViajeCase;
         this.enviarMensajeCase = enviarMensajeCase;
         this.getMensajesConversacionCase = getMensajesConversacionCase;
         this.getConversacionesUsuarioCase = getConversacionesUsuarioCase;
+        this.mensajeriaService = mensajeriaService;
+        this.usuarioRepositoryPort = usuarioRepositoryPort;
         this.securityHelper = securityHelper;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Listar todas las conversaciones (Admin)", description = "Obtiene todas las salas de chat y tickets de viajes para supervisión administrativa.")
+    @ApiResponse(responseCode = "200", description = "Lista completa de conversaciones para administración")
+    public ResponseEntity<List<ConversacionAdminResponse>> getTodasLasConversaciones() {
+        return ResponseEntity.ok(mensajeriaService.getTodasConversacionesAdmin());
     }
 
     @GetMapping("/viaje/{viajeId}")
@@ -86,11 +103,7 @@ public class MensajeriaController {
     @ApiResponse(responseCode = "403", description = "No eres participante de esta conversación")
     @ApiResponse(responseCode = "404", description = "Conversación no encontrada")
     public ResponseEntity<List<MensajeResponse>> getMensajes(@PathVariable UUID id) {
-        List<Mensaje> mensajes = getMensajesConversacionCase.getMensajesPorConversacion(id);
-        List<MensajeResponse> response = mensajes.stream()
-            .map(MensajeResponse::fromDomain)
-            .toList();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(mensajeriaService.getMensajesDetallados(id));
     }
 
     @PostMapping("/{id}/mensajes")
@@ -103,8 +116,26 @@ public class MensajeriaController {
     public ResponseEntity<MensajeResponse> enviarMensaje(
             @PathVariable UUID id,
             @Valid @RequestBody MensajeEnviarRequest request) {
-        Mensaje enviado = enviarMensajeCase.enviarMensaje(id, request.contenido());
+        Mensaje enviado = mensajeriaService.enviarMensaje(id, request.contenido());
+        String nombre = "Usuario";
+        String rol = "USUARIO";
+        if (enviado.remitenteId() != null) {
+            var u = usuarioRepositoryPort.findById(enviado.remitenteId());
+            if (u.isPresent()) {
+                var usuario = u.get();
+                nombre = usuario.nombre();
+                if (usuario.roles() != null) {
+                    if (usuario.roles().contains(com.carpooling.sv.v1.usuario.domain.value.RolUsuario.ADMIN)) {
+                        rol = "ADMIN";
+                    } else if (usuario.roles().contains(com.carpooling.sv.v1.usuario.domain.value.RolUsuario.CONDUCTOR)) {
+                        rol = "CONDUCTOR";
+                    } else if (usuario.roles().contains(com.carpooling.sv.v1.usuario.domain.value.RolUsuario.CLIENTE)) {
+                        rol = "CLIENTE";
+                    }
+                }
+            }
+        }
         return ResponseEntity.created(URI.create("/api/v1/conversaciones/" + id + "/mensajes/" + enviado.id()))
-            .body(MensajeResponse.fromDomain(enviado));
+            .body(MensajeResponse.fromDomain(enviado, nombre, rol));
     }
 }

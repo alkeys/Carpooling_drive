@@ -18,4 +18,6 @@ public interface SpringDataConversacionRepository extends JpaRepository<JpaConve
 
     @Query("SELECT c FROM JpaConversacion c WHERE c.id IN (SELECT p.id.conversacionId FROM JpaParticipanteConversacion p WHERE p.id.usuarioId = :usuarioId) ORDER BY c.creadoEn DESC")
     List<JpaConversacion> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
+
+    List<JpaConversacion> findAllByOrderByCreadoEnDesc();
 }

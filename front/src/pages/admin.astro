@@ -1,0 +1,2715 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import AuthModal from '../components/AuthModal.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout 
+  title="Panel de Administración | Rutea El Salvador"
+  description="Panel de control administrativo de Rutea. Gestión de usuarios, asignación de roles, catálogo de rutas, supervisión de viajes y configuración del sistema."
+>
+  <Navbar />
+
+  <main class="admin-page-main">
+    <div class="container">
+      
+      <!-- Admin Top Banner -->
+      <div class="admin-top-header">
+        <div class="admin-title-col">
+          <div class="admin-badge-row">
+            <span class="badge badge-sand">⚡ Módulo Administrativo</span>
+            <span class="admin-role-pill" id="admin-user-pill">Verificando credenciales...</span>
+          </div>
+          <h1 class="admin-page-title">Centro de Control y Administración</h1>
+          <p class="admin-page-subtitle">
+            Supervisa usuarios, modera viajes, gestiona el catálogo oficial de rutas y audita la seguridad en tiempo real.
+          </p>
+        </div>
+
+        <div class="admin-quick-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-admin-data">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            <span>Sincronizar Datos</span>
+          </button>
+          <a href="/publicar" class="btn btn-primary btn-sm">
+            <span>+ Publicar como Conductor</span>
+          </a>
+          <button type="button" class="btn btn-sm btn-admin-logout" id="btn-admin-logout" title="Cerrar sesión de administrador y borrar cookies">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Auth Required Gate Banner (Shown if not ADMIN) -->
+      <div class="admin-auth-gate" id="admin-auth-gate" style="display: none;">
+        <div class="gate-card glass-card">
+          <div class="gate-icon">🔒</div>
+          <div class="gate-body">
+            <h3>Acceso Restringido a Administradores</h3>
+            <p>
+              Esta sección requiere permisos de rol <code>ADMIN</code>. Inicia sesión con tus credenciales administrativas para desbloquear las operaciones de gestión.
+            </p>
+            <div class="gate-actions">
+              <button type="button" class="btn btn-primary" id="btn-admin-gate-login">
+                Iniciar Sesión con Cuenta Admin
+              </button>
+              <div class="demo-admin-hint">
+                <span>💡 Cuenta Administradora: <code>admin@admin.com</code> / <code>admin</code></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Container (Visible when authenticated) -->
+      <div class="admin-dashboard-content" id="admin-dashboard-content">
+
+        <!-- 1. Stats KPI Cards Grid -->
+        <section class="admin-kpi-grid">
+          <!-- Total Usuarios -->
+          <div class="kpi-card glass-card">
+            <div class="kpi-icon-wrap icon-users">👥</div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Usuarios Registrados</span>
+              <strong class="kpi-value" id="kpi-total-users">--</strong>
+              <span class="kpi-sub" id="kpi-drivers-ratio">Cargando conductores...</span>
+            </div>
+          </div>
+
+          <!-- Total Viajes -->
+          <div class="kpi-card glass-card">
+            <div class="kpi-icon-wrap icon-rides">🚗</div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Viajes en el Sistema</span>
+              <strong class="kpi-value" id="kpi-total-rides">--</strong>
+              <span class="kpi-sub" id="kpi-active-rides">Disponibles en vivo</span>
+            </div>
+          </div>
+
+          <!-- Total Rutas -->
+          <div class="kpi-card glass-card">
+            <div class="kpi-icon-wrap icon-routes">🛣️</div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Rutas de Catálogo</span>
+              <strong class="kpi-value" id="kpi-total-routes">--</strong>
+              <span class="kpi-sub" id="kpi-active-routes">Rutas oficiales activas</span>
+            </div>
+          </div>
+
+          <!-- System Status -->
+          <div class="kpi-card glass-card">
+            <div class="kpi-icon-wrap icon-system">🛡️</div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Infraestructura API</span>
+              <strong class="kpi-value status-online">PostGIS 16 OK</strong>
+              <span class="kpi-sub">Spring Boot 3.4.3 & JWT</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Admin Navigation Tabs -->
+        <div class="admin-tabs-nav">
+          <button type="button" class="admin-tab-btn active" data-tab="tab-users">
+            <span>👥 Usuarios & Roles</span>
+            <span class="tab-badge-count" id="badge-users-count">0</span>
+          </button>
+          <button type="button" class="admin-tab-btn" data-tab="tab-routes">
+            <span>🛣️ Catálogo de Rutas</span>
+            <span class="tab-badge-count" id="badge-routes-count">0</span>
+          </button>
+          <button type="button" class="admin-tab-btn" data-tab="tab-rides">
+            <span>🚗 Moderación de Viajes</span>
+            <span class="tab-badge-count" id="badge-rides-count">0</span>
+          </button>
+          <button type="button" class="admin-tab-btn" data-tab="tab-messages">
+            <span>💬 Mensajería & Soporte</span>
+            <span class="tab-badge-count" id="badge-messages-count">0</span>
+          </button>
+        </div>
+
+        <!-- Notification / Toast for Admin -->
+        <div class="admin-alert-banner" id="admin-alert-banner" style="display: none;" role="alert">
+          <span class="alert-icon">ℹ️</span>
+          <span id="admin-alert-text">Mensaje</span>
+          <button type="button" class="alert-close-btn" id="btn-close-admin-alert">&times;</button>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- TAB 1: GESTIÓN DE USUARIOS -->
+        <!-- ======================================================== -->
+        <section class="admin-tab-pane active" id="tab-users">
+          <div class="pane-header-box">
+            <div class="pane-title-wrap">
+              <h2>Directorio de Usuarios de Rutea</h2>
+              <p>Asigna o revoca roles administrativos (ADMIN), de conductor (CONDUCTOR) y gestiona accesos.</p>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="pane-filters-row">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  id="user-search-input" 
+                  class="admin-search-field" 
+                  placeholder="Buscar por nombre, correo o teléfono..." 
+                />
+              </div>
+
+              <select id="user-role-filter" class="admin-filter-select">
+                <option value="ALL">Todos los roles</option>
+                <option value="ADMIN">Solo Administradores</option>
+                <option value="CONDUCTOR">Solo Conductores</option>
+                <option value="CLIENTE">Solo Pasajeros</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Users Table Container -->
+          <div class="admin-table-container glass-card">
+            <table class="admin-data-table" id="users-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Correo Electrónico</th>
+                  <th>Teléfono</th>
+                  <th>Roles Asignados</th>
+                  <th>Estado</th>
+                  <th>Registro</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr>
+                  <td colspan="7" class="table-loading-row">Cargando directorio de usuarios...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 2: CATÁLOGO OFICIAL DE RUTAS -->
+        <!-- ======================================================== -->
+        <section class="admin-tab-pane" id="tab-routes" style="display: none;">
+          <div class="pane-header-box">
+            <div class="pane-title-wrap">
+              <h2>Catálogo Oficial de Rutas</h2>
+              <p>Rutas maestras predefinidas que los conductores pueden asociar a sus publicaciones.</p>
+            </div>
+
+            <div class="pane-actions-wrap">
+              <button type="button" class="btn btn-primary" id="btn-open-create-route">
+                <span>+ Nueva Ruta Oficial</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Routes Table Container -->
+          <div class="admin-table-container glass-card">
+            <table class="admin-data-table" id="routes-table">
+              <thead>
+                <tr>
+                  <th>Nombre de la Ruta</th>
+                  <th>Descripción / Trayecto</th>
+                  <th>Estado</th>
+                  <th>Fecha de Creación</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="routes-table-body">
+                <tr>
+                  <td colspan="5" class="table-loading-row">Cargando catálogo de rutas...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 3: SUPERVISIÓN Y MODERACIÓN DE VIAJES -->
+        <!-- ======================================================== -->
+        <section class="admin-tab-pane" id="tab-rides" style="display: none;">
+          <div class="pane-header-box">
+            <div class="pane-title-wrap">
+              <h2>Monitoreo y Moderación de Viajes</h2>
+              <p>Revisa viajes publicados, cancela viajes sospechosos o modifica estados operativos en tiempo real.</p>
+            </div>
+
+            <div class="pane-filters-row">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  id="ride-search-input" 
+                  class="admin-search-field" 
+                  placeholder="Filtrar por origen o destino..." 
+                />
+              </div>
+
+              <select id="ride-status-filter" class="admin-filter-select">
+                <option value="ALL">Todos los estados</option>
+                <option value="PUBLICADO">PUBLICADO</option>
+                <option value="EN_CURSO">EN_CURSO</option>
+                <option value="FINALIZADO">FINALIZADO</option>
+                <option value="CANCELADO">CANCELADO</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Rides Table Container -->
+          <div class="admin-table-container glass-card">
+            <table class="admin-data-table" id="rides-table">
+              <thead>
+                <tr>
+                  <th>Trayecto (Origen ➔ Destino)</th>
+                  <th>Salida Programada</th>
+                  <th>Cupos</th>
+                  <th>Tarifa Sugerida</th>
+                  <th>Estado</th>
+                  <th>ID Viaje</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="rides-table-body">
+                <tr>
+                  <td colspan="7" class="table-loading-row">Cargando viajes activos...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 4: MENSAJERÍA & SOPORTE EN TIEMPO REAL -->
+        <!-- ======================================================== -->
+        <section class="admin-tab-pane" id="tab-messages" style="display: none;">
+          <div class="pane-header-box">
+            <div class="pane-title-wrap">
+              <h2>Mesa de Soporte y Chat en Tiempo Real</h2>
+              <p>Supervisa conversaciones entre conductores y pasajeros, modera tickets de viaje y responde en directo mediante WebSocket STOMP.</p>
+            </div>
+
+            <div class="pane-filters-row">
+              <div class="ws-connection-indicator" id="ws-status-badge">
+                <span class="status-pulse-dot" id="ws-pulse-dot"></span>
+                <span id="ws-status-label">Conectando WebSocket...</span>
+              </div>
+
+              <button type="button" class="btn btn-outline btn-sm" id="btn-open-new-ticket">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span>+ Abrir Sala por Viaje</span>
+              </button>
+
+              <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-messages">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                <span>Sincronizar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages 2-Column Layout -->
+          <div class="admin-chat-grid glass-card">
+            <!-- Left: Sidebar Conversation List -->
+            <div class="chat-threads-sidebar">
+              <div class="threads-search-bar">
+                <div class="search-input-wrap">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input 
+                    type="text" 
+                    id="chat-search-input" 
+                    class="admin-search-field" 
+                    placeholder="Buscar ruta o usuario..." 
+                  />
+                </div>
+                <div class="threads-filter-pills">
+                  <button type="button" class="filter-pill active" id="filter-threads-all">Todas (<span id="threads-total-count">0</span>)</button>
+                  <button type="button" class="filter-pill" id="filter-threads-active">Con Mensajes</button>
+                </div>
+              </div>
+
+              <div class="threads-list" id="chat-threads-list">
+                <div class="chat-thread-loading">Cargando salas de conversación...</div>
+              </div>
+            </div>
+
+            <!-- Right: Live Chat Window -->
+            <div class="chat-main-window" id="chat-main-window">
+              <!-- Empty state -->
+              <div class="chat-empty-state" id="chat-empty-state">
+                <div class="empty-chat-icon">💬</div>
+                <h3>Selecciona una conversación</h3>
+                <p>Elige un hilo del panel lateral para inspeccionar el chat en vivo, responder como Soporte o verificar las condiciones del viaje.</p>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-empty-open-chat">
+                  <span>+ Iniciar Chat de Viaje</span>
+                </button>
+              </div>
+
+              <!-- Active Chat View -->
+              <div class="chat-active-container" id="chat-active-container" style="display: none;">
+                <!-- Header -->
+                <div class="active-chat-header">
+                  <div class="active-chat-info">
+                    <div class="route-badge-row">
+                      <span class="badge badge-fresh" id="chat-header-route">San Salvador ➔ La Libertad</span>
+                      <span class="chat-trip-id" id="chat-header-trip-id">Viaje: #...</span>
+                    </div>
+                    <div class="chat-driver-meta">
+                      <span class="chat-driver-name" id="chat-header-driver">Conductor: --</span>
+                      <span class="dot-sep">·</span>
+                      <span class="chat-participants-count" id="chat-header-participants">1 participante</span>
+                    </div>
+                  </div>
+                  <div class="active-chat-status">
+                    <span class="badge badge-sand" id="chat-live-badge">🟢 Conexión Activa</span>
+                  </div>
+                </div>
+
+                <!-- Messages Stream -->
+                <div class="active-chat-messages" id="chat-messages-container">
+                  <!-- Rendered messages -->
+                </div>
+
+                <!-- Quick Response Chips -->
+                <div class="chat-quick-replies">
+                  <button type="button" class="reply-chip" data-reply="¡Hola! Soporte Rutea a su disposición. ¿Tienen alguna duda sobre la ruta o el vehículo?">
+                    👋 Saludo Soporte
+                  </button>
+                  <button type="button" class="reply-chip" data-reply="Recordatorio de seguridad: favor confirmar punto de encuentro seguro y puntualidad.">
+                    📍 Punto de Encuentro
+                  </button>
+                  <button type="button" class="reply-chip" data-reply="Este viaje cuenta con verificación de conductor y vehículo por Rutea.">
+                    🛡️ Verificación Oficial
+                  </button>
+                </div>
+
+                <!-- Composer -->
+                <form class="active-chat-composer" id="form-chat-send" onsubmit="return false;">
+                  <input 
+                    type="text" 
+                    id="chat-message-input" 
+                    class="composer-input" 
+                    placeholder="Escribe como Administrador / Soporte... (Presiona Enter)" 
+                    autocomplete="off"
+                    required
+                  />
+                  <button type="submit" class="btn btn-primary btn-sm composer-send-btn" id="btn-chat-send">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span>Enviar</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: GESTIÓN DE ROLES DE USUARIO -->
+  <!-- ======================================================== -->
+  <div class="admin-modal-backdrop" id="modal-roles" style="display: none;">
+    <div class="admin-modal-box glass-card">
+      <div class="modal-head">
+        <h3>🛡️ Asignar Roles de Usuario</h3>
+        <button type="button" class="modal-x-btn" id="btn-close-roles-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-sub">
+          Modifica los privilegios del usuario: <strong id="modal-roles-username">Usuario</strong>
+        </p>
+
+        <form id="form-update-roles" onsubmit="return false;">
+          <input type="hidden" id="modal-roles-user-id" />
+
+          <div class="roles-checklist">
+            <label class="role-check-item">
+              <input type="checkbox" name="admin_role" value="ADMIN" />
+              <div class="role-desc-wrap">
+                <span class="role-tag-badge badge-admin">ADMIN</span>
+                <span class="role-hint">Acceso completo al panel administrativo, catálogos y gestión de roles.</span>
+              </div>
+            </label>
+
+            <label class="role-check-item">
+              <input type="checkbox" name="admin_role" value="CONDUCTOR" />
+              <div class="role-desc-wrap">
+                <span class="role-tag-badge badge-conductor">CONDUCTOR</span>
+                <span class="role-hint">Permite publicar viajes, registrar vehículos y responder solicitudes.</span>
+              </div>
+            </label>
+
+            <label class="role-check-item">
+              <input type="checkbox" name="admin_role" value="CLIENTE" />
+              <div class="role-desc-wrap">
+                <span class="role-tag-badge badge-cliente">CLIENTE / PASAJERO</span>
+                <span class="role-hint">Permite buscar rutas, solicitar cupos y calificar viajes.</span>
+              </div>
+            </label>
+
+            <label class="role-check-item">
+              <input type="checkbox" name="admin_role" value="USUARIO" />
+              <div class="role-desc-wrap">
+                <span class="role-tag-badge badge-usuario">USUARIO BASE</span>
+                <span class="role-hint">Rol fundamental de cuenta verificada en Rutea.</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-roles">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-roles">Guardar Cambios de Roles</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: EDITAR PERFIL DE USUARIO -->
+  <!-- ======================================================== -->
+  <div class="admin-modal-backdrop" id="modal-edit-user" style="display: none;">
+    <div class="admin-modal-box glass-card">
+      <div class="modal-head">
+        <h3>✏️ Modificar Datos de Usuario</h3>
+        <button type="button" class="modal-x-btn" id="btn-close-edit-user-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="form-edit-user" onsubmit="return false;">
+          <input type="hidden" id="modal-edit-user-id" />
+
+          <div class="admin-form-row">
+            <div class="form-group">
+              <label for="edit-user-nombre">Nombre:</label>
+              <input type="text" id="edit-user-nombre" class="admin-input" required />
+            </div>
+            <div class="form-group">
+              <label for="edit-user-apellido">Apellido:</label>
+              <input type="text" id="edit-user-apellido" class="admin-input" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-user-telefono">Teléfono El Salvador (+503):</label>
+            <input type="tel" id="edit-user-telefono" class="admin-input" required />
+          </div>
+
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-edit-user">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-edit-user">Actualizar Perfil</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CREAR / EDITAR RUTA DE CATÁLOGO -->
+  <!-- ======================================================== -->
+  <div class="admin-modal-backdrop" id="modal-route" style="display: none;">
+    <div class="admin-modal-box glass-card">
+      <div class="modal-head">
+        <h3 id="modal-route-title">🛣️ Crear Nueva Ruta Oficial</h3>
+        <button type="button" class="modal-x-btn" id="btn-close-route-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="form-route" onsubmit="return false;">
+          <input type="hidden" id="modal-route-id" />
+
+          <div class="form-group">
+            <label for="route-nombre">Nombre de la Ruta:</label>
+            <input 
+              type="text" 
+              id="route-nombre" 
+              class="admin-input" 
+              placeholder="Ej. San Salvador ➔ Puerto de La Libertad (Surf City)" 
+              required 
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="route-descripcion">Descripción del Recorrido:</label>
+            <textarea 
+              id="route-descripcion" 
+              class="admin-textarea" 
+              rows="3" 
+              placeholder="Ej. Recorrido por Carretera al Puerto CA-4, conectando Multiplaza con el malecón del puerto y playas aledañas." 
+              required
+            ></textarea>
+          </div>
+
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-route">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-route">Guardar Ruta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ABRIR SALA DE CHAT POR VIAJE -->
+  <!-- ======================================================== -->
+  <div class="admin-modal-backdrop" id="modal-new-ticket" style="display: none;">
+    <div class="admin-modal-box glass-card">
+      <div class="modal-head">
+        <h3>💬 Abrir Conversación de Viaje</h3>
+        <button type="button" class="modal-x-btn" id="btn-close-ticket-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-sub">
+          Selecciona un viaje publicado en la plataforma para inicializar su sala de chat o soporte.
+        </p>
+
+        <form id="form-open-ticket" onsubmit="return false;">
+          <div class="form-group-admin">
+            <label for="select-ticket-viaje">Viaje Destino:</label>
+            <select id="select-ticket-viaje" class="admin-form-input" required>
+              <option value="">Cargando viajes disponibles...</option>
+            </select>
+          </div>
+
+          <div class="form-group-admin">
+            <label for="ticket-initial-msg">Mensaje inicial de apertura (Opcional):</label>
+            <textarea id="ticket-initial-msg" class="admin-form-input" rows="3" placeholder="Ej. Soporte Rutea: Sala de chat oficial abierta para coordinar detalles del viaje..."></textarea>
+          </div>
+
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-ticket">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-ticket">Abrir Sala de Chat</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+  <AuthModal />
+</Layout>
+
+<style>
+  .admin-page-main {
+    padding: 2.2rem 0 5rem;
+    min-height: 85vh;
+    background: radial-gradient(circle at 15% 15%, rgba(143, 214, 200, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(11, 93, 103, 0.08) 0%, transparent 40%);
+  }
+
+  /* Header */
+  .admin-top-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .admin-title-col {
+    max-width: 720px;
+  }
+
+  .admin-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .admin-role-pill {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #D97706;
+    background: rgba(217, 119, 6, 0.12);
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-full);
+  }
+
+  .admin-page-title {
+    font-size: 2.1rem;
+    font-family: var(--font-display);
+    color: var(--color-slate);
+    margin: 0 0 0.4rem;
+  }
+
+  .admin-page-subtitle {
+    font-size: 0.98rem;
+    color: var(--color-slate-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .admin-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .btn-admin-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.95rem;
+    background: rgba(220, 38, 38, 0.08);
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    color: #DC2626;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-admin-logout:hover {
+    background: #DC2626;
+    border-color: #DC2626;
+    color: #FFFFFF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
+  }
+
+  /* Auth Gate Card */
+  .admin-auth-gate {
+    margin: 2rem 0;
+  }
+
+  .gate-card {
+    background: #FFFFFF;
+    border-radius: var(--radius-xl);
+    padding: 2.5rem 2rem;
+    border: 1.5px dashed #D97706;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  }
+
+  .gate-icon {
+    font-size: 3.5rem;
+  }
+
+  .gate-body h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.3rem;
+    color: var(--color-slate);
+  }
+
+  .gate-body p {
+    font-size: 0.92rem;
+    color: var(--color-slate-muted);
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+  }
+
+  .gate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .demo-admin-hint {
+    font-size: 0.8rem;
+    color: var(--color-slate-muted);
+  }
+
+  .demo-admin-hint code {
+    background: rgba(11, 93, 103, 0.1);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    color: var(--color-primary);
+  }
+
+  /* KPI Grid */
+  .admin-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-card {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 15px rgba(11, 93, 103, 0.04);
+  }
+
+  .kpi-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .icon-users { background: rgba(15, 138, 139, 0.15); }
+  .icon-rides { background: rgba(143, 214, 200, 0.3); }
+  .icon-routes { background: rgba(242, 233, 216, 0.6); }
+  .icon-system { background: rgba(16, 185, 129, 0.15); }
+
+  .kpi-meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kpi-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .kpi-value {
+    font-size: 1.6rem;
+    font-family: var(--font-display);
+    color: var(--color-slate);
+    line-height: 1.2;
+    margin: 0.15rem 0;
+  }
+
+  .kpi-value.status-online {
+    color: #059669;
+    font-size: 1.15rem;
+  }
+
+  .kpi-sub {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+  }
+
+  /* Admin Tabs Nav */
+  .admin-tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid rgba(11, 93, 103, 0.12);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .admin-tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    margin-bottom: -2px;
+  }
+
+  .admin-tab-btn:hover {
+    color: var(--color-primary);
+  }
+
+  .admin-tab-btn.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-ocean);
+  }
+
+  .tab-badge-count {
+    background: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-full);
+    color: var(--color-slate);
+  }
+
+  .admin-tab-btn.active .tab-badge-count {
+    background: var(--color-ocean);
+    color: #FFFFFF;
+    border-color: var(--color-ocean);
+  }
+
+  /* Pane Header */
+  .pane-header-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .pane-title-wrap h2 {
+    font-size: 1.35rem;
+    color: var(--color-slate);
+    margin: 0 0 0.2rem;
+  }
+
+  .pane-title-wrap p {
+    font-size: 0.88rem;
+    color: var(--color-slate-muted);
+    margin: 0;
+  }
+
+  .pane-filters-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-input-wrap svg {
+    position: absolute;
+    left: 0.85rem;
+    color: var(--color-slate-muted);
+  }
+
+  .admin-search-field {
+    padding: 0.55rem 0.85rem 0.55rem 2.4rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.88rem;
+    color: var(--color-slate);
+    outline: none;
+    min-width: 280px;
+  }
+
+  .admin-search-field:focus,
+  .admin-filter-select:focus,
+  .admin-input:focus,
+  .admin-textarea:focus {
+    border-color: var(--color-ocean);
+    box-shadow: 0 0 0 3px rgba(143, 214, 200, 0.35);
+  }
+
+  .admin-filter-select {
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.88rem;
+    color: var(--color-slate);
+    outline: none;
+  }
+
+  /* Tables */
+  .admin-table-container {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    overflow-x: auto;
+    box-shadow: 0 4px 20px rgba(11, 93, 103, 0.04);
+  }
+
+  .admin-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    text-align: left;
+  }
+
+  .admin-data-table th {
+    background: var(--color-sand-light);
+    color: var(--color-slate);
+    font-weight: 700;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1.5px solid rgba(11, 93, 103, 0.12);
+    white-space: nowrap;
+  }
+
+  .admin-data-table td {
+    padding: 0.95rem 1.1rem;
+    border-bottom: 1px solid rgba(11, 93, 103, 0.08);
+    color: var(--color-slate);
+    vertical-align: middle;
+  }
+
+  .admin-data-table tbody tr:hover {
+    background: rgba(143, 214, 200, 0.08);
+  }
+
+  .table-loading-row {
+    text-align: center;
+    padding: 3rem !important;
+    color: var(--color-slate-muted);
+    font-style: italic;
+  }
+
+  /* User Row Formatting */
+  .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .user-avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .user-name-meta strong {
+    display: block;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+  }
+
+  .user-name-meta span {
+    font-size: 0.75rem;
+    color: var(--color-slate-muted);
+  }
+
+  /* Badges */
+  .role-tag-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-sm);
+    margin-right: 0.25rem;
+  }
+
+  .badge-admin { background: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE; }
+  .badge-conductor { background: #CCFBF1; color: #0F766E; border: 1px solid #99F6E4; }
+  .badge-cliente { background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
+  .badge-usuario { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
+
+  .status-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full);
+  }
+
+  .status-tag.active { background: #DEF7EC; color: #03543F; }
+  .status-tag.inactive { background: #FDE8E8; color: #9B1C1C; }
+  .status-tag.published { background: #E1EFFE; color: #1E429F; }
+
+  /* Table Actions */
+  .table-actions-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  .btn-table-action {
+    background: transparent;
+    border: 1px solid rgba(11, 93, 103, 0.15);
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-slate);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-table-action:hover {
+    background: var(--color-sand-light);
+    border-color: var(--color-ocean);
+    color: var(--color-ocean);
+  }
+
+  .btn-table-action.btn-danger-action:hover {
+    background: #FEE2E2;
+    border-color: #EF4444;
+    color: #DC2626;
+  }
+
+  /* Modals */
+  .admin-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(28, 31, 42, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  .admin-modal-box {
+    width: 100%;
+    max-width: 520px;
+    background: #FFFFFF;
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+    animation: modalPop 200ms ease-out;
+  }
+
+  @keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(11, 93, 103, 0.1);
+    padding-bottom: 0.75rem;
+  }
+
+  .modal-head h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--color-slate);
+  }
+
+  .modal-x-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .modal-sub {
+    font-size: 0.88rem;
+    color: var(--color-slate-muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .roles-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .role-check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+  }
+
+  .role-check-item input {
+    margin-top: 0.25rem;
+  }
+
+  .role-desc-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .role-hint {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+  }
+
+  .admin-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .admin-input,
+  .admin-textarea {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(11, 93, 103, 0.15);
+    background: #FFFFFF;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+    outline: none;
+  }
+
+  .modal-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid rgba(11, 93, 103, 0.1);
+    padding-top: 1rem;
+  }
+
+  .admin-alert-banner {
+    background: #DEF7EC;
+    border: 1px solid #31C48D;
+    color: #03543F;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .alert-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: currentColor;
+    cursor: pointer;
+  }
+
+  /* ======================================================== */
+  /* ESTILOS: MENSAJERÍA Y CHAT EN TIEMPO REAL (ADMIN) */
+  /* ======================================================== */
+  .ws-connection-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: rgba(15, 138, 139, 0.1);
+    color: var(--color-ocean);
+    border: 1px solid rgba(15, 138, 139, 0.2);
+  }
+
+  .status-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10B981;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+    animation: pulseDot 2s infinite;
+  }
+
+  .status-pulse-dot.connecting {
+    background-color: #F59E0B;
+    box-shadow: 0 0 0 rgba(245, 158, 11, 0.4);
+  }
+
+  .status-pulse-dot.disconnected {
+    background-color: #EF4444;
+    animation: none;
+  }
+
+  @keyframes pulseDot {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
+  .admin-chat-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    min-height: 640px;
+    max-height: 760px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(15, 138, 139, 0.2);
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Left Sidebar */
+  .chat-threads-sidebar {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(15, 138, 139, 0.12);
+    background: rgba(242, 233, 216, 0.2);
+  }
+
+  .threads-search-bar {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(15, 138, 139, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    background: white;
+  }
+
+  .threads-filter-pills {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .filter-pill {
+    background: #F8FAFC;
+    border: 1px solid rgba(15, 138, 139, 0.2);
+    border-radius: var(--radius-full);
+    padding: 0.25rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+
+  .filter-pill:hover {
+    background: rgba(143, 214, 200, 0.2);
+    color: var(--color-primary);
+  }
+
+  .filter-pill.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .threads-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .chat-thread-loading, .chat-thread-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--color-slate-muted);
+  }
+
+  .thread-card {
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+    background: white;
+    border: 1px solid rgba(15, 138, 139, 0.12);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .thread-card:hover {
+    transform: translateX(3px);
+    border-color: var(--color-ocean);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .thread-card.active {
+    background: rgba(15, 138, 139, 0.08);
+    border-left: 4px solid var(--color-primary);
+    border-color: var(--color-ocean);
+  }
+
+  .thread-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .thread-route-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-slate);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .thread-time {
+    font-size: 0.7rem;
+    color: var(--color-slate-light);
+    white-space: nowrap;
+  }
+
+  .thread-driver-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.76rem;
+    color: var(--color-ocean);
+    font-weight: 600;
+  }
+
+  .thread-preview-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .thread-preview-text {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
+  .thread-count-badge {
+    background: var(--color-sand);
+    color: var(--color-primary);
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 0.12rem 0.5rem;
+    border-radius: var(--radius-full);
+  }
+
+  /* Right Window */
+  .chat-main-window {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #FAF9F6;
+    position: relative;
+  }
+
+  .chat-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .empty-chat-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+  }
+
+  .chat-empty-state h3 {
+    font-size: 1.3rem;
+    color: var(--color-slate);
+    margin: 0;
+  }
+
+  .chat-empty-state p {
+    font-size: 0.9rem;
+    color: var(--color-slate-muted);
+    max-width: 420px;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .chat-active-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .active-chat-header {
+    padding: 1rem 1.4rem;
+    background: white;
+    border-bottom: 1px solid rgba(15, 138, 139, 0.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .route-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .chat-trip-id {
+    font-size: 0.72rem;
+    font-family: monospace;
+    color: var(--color-slate-light);
+  }
+
+  .chat-driver-meta {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .active-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-height: 380px;
+    max-height: 480px;
+    scroll-behavior: smooth;
+  }
+
+  .chat-msg-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 78%;
+  }
+
+  .chat-msg-row.msg-admin {
+    align-self: flex-end;
+  }
+
+  .chat-msg-row.msg-other {
+    align-self: flex-start;
+  }
+
+  .msg-bubble-admin {
+    background: linear-gradient(135deg, #0B5D67 0%, #0F8A8B 100%);
+    color: white;
+    border-radius: 14px 14px 2px 14px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(11, 93, 103, 0.18);
+  }
+
+  .msg-bubble-driver {
+    background: #FFFFFF;
+    border: 1px solid #8FD6C8;
+    color: var(--color-slate);
+    border-radius: 14px 14px 14px 2px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .msg-bubble-passenger {
+    background: #FFFFFF;
+    border: 1px solid rgba(15, 138, 139, 0.15);
+    color: var(--color-slate);
+    border-radius: 14px 14px 14px 2px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .msg-sender-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    margin-bottom: 0.3rem;
+    font-weight: 700;
+  }
+
+  .msg-sender-admin {
+    color: #8FD6C8;
+  }
+
+  .msg-sender-driver {
+    color: #0F8A8B;
+  }
+
+  .msg-sender-passenger {
+    color: var(--color-slate);
+  }
+
+  .msg-body-text {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  .msg-footer-time {
+    font-size: 0.68rem;
+    margin-top: 0.35rem;
+    text-align: right;
+    opacity: 0.8;
+  }
+
+  .chat-quick-replies {
+    padding: 0.5rem 1rem;
+    background: #F8FAFC;
+    border-top: 1px solid rgba(15, 138, 139, 0.08);
+    display: flex;
+    gap: 0.45rem;
+    overflow-x: auto;
+  }
+
+  .reply-chip {
+    background: white;
+    border: 1px solid rgba(15, 138, 139, 0.25);
+    border-radius: var(--radius-full);
+    padding: 0.25rem 0.7rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+  }
+
+  .reply-chip:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .active-chat-composer {
+    padding: 0.9rem 1.2rem;
+    background: white;
+    border-top: 1px solid rgba(15, 138, 139, 0.12);
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+  }
+
+  .composer-input {
+    flex: 1;
+    padding: 0.75rem 1.1rem;
+    border: 1px solid rgba(15, 138, 139, 0.25);
+    border-radius: var(--radius-full);
+    font-size: 0.88rem;
+    outline: none;
+    transition: var(--transition-fast);
+  }
+
+  .composer-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(11, 93, 103, 0.12);
+  }
+
+  .composer-send-btn {
+    border-radius: var(--radius-full);
+    padding: 0.7rem 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  @media (max-width: 860px) {
+    .admin-chat-grid {
+      grid-template-columns: 1fr;
+      max-height: none;
+    }
+    .chat-threads-sidebar {
+      max-height: 280px;
+    }
+  }
+</style>
+
+<script>
+  import { 
+    authService, 
+    usuariosService, 
+    rutasService, 
+    viajesService,
+    mensajeriaService,
+    StompChatClient,
+    type UsuarioResponse,
+    type RutaResponse,
+    type ViajeResponse,
+    type ConversacionAdminResponse,
+    type MensajeResponse
+  } from '../services';
+
+  // State
+  let usersList: UsuarioResponse[] = [];
+  let routesList: RutaResponse[] = [];
+  let ridesList: ViajeResponse[] = [];
+  let conversationsList: ConversacionAdminResponse[] = [];
+
+  let activeConversationId = '';
+  let activeConversationMessages: MensajeResponse[] = [];
+  let stompClient: StompChatClient | null = null;
+  let activeRoomUnsubscribe: (() => void) | null = null;
+  let threadsFilterMode: 'ALL' | 'ACTIVE' = 'ALL';
+
+  let selectedUserIdForRoles = '';
+  let selectedUserIdForEdit = '';
+  let editingRouteId = '';
+
+  // DOM Elements
+  const authGate = document.getElementById('admin-auth-gate');
+  const dashboardContent = document.getElementById('admin-dashboard-content');
+  const adminRolePill = document.getElementById('admin-user-pill');
+  const btnAdminGateLogin = document.getElementById('btn-admin-gate-login');
+  const btnRefreshData = document.getElementById('btn-refresh-admin-data');
+  const btnAdminLogout = document.getElementById('btn-admin-logout');
+
+  // KPI Elements
+  const kpiTotalUsers = document.getElementById('kpi-total-users');
+  const kpiDriversRatio = document.getElementById('kpi-drivers-ratio');
+  const kpiTotalRides = document.getElementById('kpi-total-rides');
+  const kpiActiveRides = document.getElementById('kpi-active-rides');
+  const kpiTotalRoutes = document.getElementById('kpi-total-routes');
+  const kpiActiveRoutes = document.getElementById('kpi-active-routes');
+
+  // Badge counts
+  const badgeUsersCount = document.getElementById('badge-users-count');
+  const badgeRoutesCount = document.getElementById('badge-routes-count');
+  const badgeRidesCount = document.getElementById('badge-rides-count');
+
+  // Tables
+  const usersTableBody = document.getElementById('users-table-body');
+  const routesTableBody = document.getElementById('routes-table-body');
+  const ridesTableBody = document.getElementById('rides-table-body');
+
+  // Search & Filters
+  const userSearchInput = document.getElementById('user-search-input') as HTMLInputElement | null;
+  const userRoleFilter = document.getElementById('user-role-filter') as HTMLSelectElement | null;
+  const rideSearchInput = document.getElementById('ride-search-input') as HTMLInputElement | null;
+  const rideStatusFilter = document.getElementById('ride-status-filter') as HTMLSelectElement | null;
+
+  // Modals
+  const modalRoles = document.getElementById('modal-roles');
+  const btnCloseRolesModal = document.getElementById('btn-close-roles-modal');
+  const btnCancelRoles = document.getElementById('btn-cancel-roles');
+  const formUpdateRoles = document.getElementById('form-update-roles');
+  const modalRolesUsername = document.getElementById('modal-roles-username');
+  const modalRolesUserId = document.getElementById('modal-roles-user-id') as HTMLInputElement | null;
+
+  const modalEditUser = document.getElementById('modal-edit-user');
+  const btnCloseEditUserModal = document.getElementById('btn-close-edit-user-modal');
+  const btnCancelEditUser = document.getElementById('btn-cancel-edit-user');
+  const formEditUser = document.getElementById('form-edit-user');
+  const editUserNombre = document.getElementById('edit-user-nombre') as HTMLInputElement | null;
+  const editUserApellido = document.getElementById('edit-user-apellido') as HTMLInputElement | null;
+  const editUserTelefono = document.getElementById('edit-user-telefono') as HTMLInputElement | null;
+  const modalEditUserId = document.getElementById('modal-edit-user-id') as HTMLInputElement | null;
+
+  const modalRoute = document.getElementById('modal-route');
+  const btnOpenCreateRoute = document.getElementById('btn-open-create-route');
+  const btnCloseRouteModal = document.getElementById('btn-close-route-modal');
+  const btnCancelRoute = document.getElementById('btn-cancel-route');
+  const formRoute = document.getElementById('form-route');
+  const modalRouteTitle = document.getElementById('modal-route-title');
+  const modalRouteId = document.getElementById('modal-route-id') as HTMLInputElement | null;
+  const routeNombre = document.getElementById('route-nombre') as HTMLInputElement | null;
+  const routeDescripcion = document.getElementById('route-descripcion') as HTMLTextAreaElement | null;
+
+  // Messaging & Chat DOM Elements
+  const badgeMessagesCount = document.getElementById('badge-messages-count');
+  const wsStatusBadge = document.getElementById('ws-status-badge');
+  const wsPulseDot = document.getElementById('ws-pulse-dot');
+  const wsStatusLabel = document.getElementById('ws-status-label');
+  const btnRefreshMessages = document.getElementById('btn-refresh-messages');
+  const btnOpenNewTicket = document.getElementById('btn-open-new-ticket');
+  const btnEmptyOpenChat = document.getElementById('btn-empty-open-chat');
+
+  const chatSearchInput = document.getElementById('chat-search-input') as HTMLInputElement | null;
+  const filterThreadsAll = document.getElementById('filter-threads-all');
+  const filterThreadsActive = document.getElementById('filter-threads-active');
+  const chatThreadsList = document.getElementById('chat-threads-list');
+
+  const chatEmptyState = document.getElementById('chat-empty-state');
+  const chatActiveContainer = document.getElementById('chat-active-container');
+  const chatHeaderRoute = document.getElementById('chat-header-route');
+  const chatHeaderTripId = document.getElementById('chat-header-trip-id');
+  const chatHeaderDriver = document.getElementById('chat-header-driver');
+  const chatHeaderParticipants = document.getElementById('chat-header-participants');
+  const chatLiveBadge = document.getElementById('chat-live-badge');
+  const chatMessagesContainer = document.getElementById('chat-messages-container');
+
+  const formChatSend = document.getElementById('form-chat-send');
+  const chatMessageInput = document.getElementById('chat-message-input') as HTMLInputElement | null;
+  const btnChatSend = document.getElementById('btn-chat-send');
+
+  const modalNewTicket = document.getElementById('modal-new-ticket');
+  const btnCloseTicketModal = document.getElementById('btn-close-ticket-modal');
+  const btnCancelTicket = document.getElementById('btn-cancel-ticket');
+  const formOpenTicket = document.getElementById('form-open-ticket');
+  const selectTicketViaje = document.getElementById('select-ticket-viaje') as HTMLSelectElement | null;
+  const ticketInitialMsg = document.getElementById('ticket-initial-msg') as HTMLTextAreaElement | null;
+
+  // Alert Banner
+  const adminAlertBanner = document.getElementById('admin-alert-banner');
+  const adminAlertText = document.getElementById('admin-alert-text');
+  const btnCloseAdminAlert = document.getElementById('btn-close-admin-alert');
+
+  function showAdminNotice(msg: string, isError: boolean = false) {
+    if (!adminAlertBanner || !adminAlertText) return;
+    adminAlertText.textContent = msg;
+    adminAlertBanner.style.background = isError ? '#FDE8E8' : '#DEF7EC';
+    adminAlertBanner.style.color = isError ? '#9B1C1C' : '#03543F';
+    adminAlertBanner.style.borderColor = isError ? '#F98080' : '#31C48D';
+    adminAlertBanner.style.display = 'flex';
+    setTimeout(() => {
+      adminAlertBanner.style.display = 'none';
+    }, 5500);
+  }
+
+  btnCloseAdminAlert?.addEventListener('click', () => {
+    if (adminAlertBanner) adminAlertBanner.style.display = 'none';
+  });
+
+  // 1. Verificación de Autenticación de Administrador
+  async function checkAdminAuth() {
+    const user = authService.getStoredUser();
+    const isAdmin = Boolean(user && user.roles && user.roles.includes('ADMIN' as any));
+
+    if (isAdmin) {
+      if (adminRolePill) adminRolePill.textContent = `Sesión: ${user?.nombre} (ADMIN)`;
+      if (authGate) authGate.style.display = 'none';
+      if (dashboardContent) dashboardContent.style.display = 'block';
+      loadAllAdminData();
+    } else {
+      if (adminRolePill) adminRolePill.textContent = 'Acceso Denegado (No Admin)';
+      if (authGate) authGate.style.display = 'block';
+      if (dashboardContent) dashboardContent.style.display = 'none';
+    }
+  }
+
+  btnAdminGateLogin?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('request-auth-required', {
+      detail: { action: 'acceder al panel de administración', message: 'Inicia sesión con la cuenta de administrador.' }
+    }));
+  });
+
+  window.addEventListener('auth-state-changed', () => {
+    checkAdminAuth();
+  });
+
+  // 2. Cargar Todos los Datos desde la API
+  async function loadAllAdminData() {
+    try {
+      const [users, routes, rides, conversations] = await Promise.all([
+        usuariosService.getAllUsuarios().catch(() => []),
+        rutasService.getAllRutas().catch(() => rutasService.getRutas().catch(() => [])),
+        viajesService.buscarViajes().catch(() => []),
+        mensajeriaService.listarTodasAdmin().catch(() => [])
+      ]);
+
+      usersList = users;
+      routesList = routes;
+      ridesList = rides;
+      conversationsList = conversations;
+
+      updateKpis();
+      renderUsersTable();
+      renderRoutesTable();
+      renderRidesTable();
+      renderConversationsList();
+      initWebSocketChat();
+    } catch (e: any) {
+      showAdminNotice('Error al sincronizar datos con el servidor: ' + (e?.message || ''), true);
+    }
+  }
+
+  btnRefreshData?.addEventListener('click', async () => {
+    showAdminNotice('Sincronizando información en vivo desde la base de datos...');
+    await loadAllAdminData();
+  });
+
+  btnAdminLogout?.addEventListener('click', async () => {
+    try {
+      if (btnAdminLogout) {
+        btnAdminLogout.setAttribute('disabled', 'true');
+        btnAdminLogout.innerHTML = `<span>Cerrando...</span>`;
+      }
+      if (stompClient) {
+        stompClient.disconnect();
+        stompClient = null;
+      }
+      showAdminNotice('Cerrando sesión en el servidor y eliminando cookies...');
+      const res = await authService.logout();
+      showAdminNotice(res?.mensaje || 'Sesión finalizada. Cookies eliminadas con éxito.');
+    } catch (err: any) {
+      console.warn('Error en logout admin:', err);
+      showAdminNotice('Sesión finalizada localmente.', false);
+    } finally {
+      if (btnAdminLogout) {
+        btnAdminLogout.removeAttribute('disabled');
+        btnAdminLogout.innerHTML = `
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Cerrar Sesión</span>
+        `;
+      }
+      checkAdminAuth();
+    }
+  });
+
+  // 3. Métricas y KPIs
+  function updateKpis() {
+    if (kpiTotalUsers) kpiTotalUsers.textContent = String(usersList.length);
+    const conductorsCount = usersList.filter(u => u.roles?.includes('CONDUCTOR' as any)).length;
+    if (kpiDriversRatio) kpiDriversRatio.textContent = `${conductorsCount} conductores verificados`;
+
+    if (kpiTotalRides) kpiTotalRides.textContent = String(ridesList.length);
+    const publishedRides = ridesList.filter(r => r.estado === 'PUBLICADO').length;
+    if (kpiActiveRides) kpiActiveRides.textContent = `${publishedRides} viajes en estado PUBLICADO`;
+
+    if (kpiTotalRoutes) kpiTotalRoutes.textContent = String(routesList.length);
+    const activeRoutes = routesList.filter(r => r.activo).length;
+    if (kpiActiveRoutes) kpiActiveRoutes.textContent = `${activeRoutes} rutas activas en catálogo`;
+
+    if (badgeUsersCount) badgeUsersCount.textContent = String(usersList.length);
+    if (badgeRoutesCount) badgeRoutesCount.textContent = String(routesList.length);
+    if (badgeRidesCount) badgeRidesCount.textContent = String(ridesList.length);
+  }
+
+  // 4. Render Tabla de Usuarios
+  function renderUsersTable() {
+    if (!usersTableBody) return;
+    const search = userSearchInput?.value.toLowerCase().trim() || '';
+    const roleFilter = userRoleFilter?.value || 'ALL';
+
+    const filtered = usersList.filter(u => {
+      const matchSearch = !search || 
+        `${u.nombre} ${u.apellido}`.toLowerCase().includes(search) ||
+        u.correo.toLowerCase().includes(search) ||
+        (u.telefono && u.telefono.includes(search));
+
+      const matchRole = roleFilter === 'ALL' || u.roles?.includes(roleFilter as any);
+      return matchSearch && matchRole;
+    });
+
+    if (filtered.length === 0) {
+      usersTableBody.innerHTML = `<tr><td colspan="7" class="table-loading-row">No se encontraron usuarios coincidentes.</td></tr>`;
+      return;
+    }
+
+    usersTableBody.innerHTML = filtered.map(u => {
+      const initial = (u.nombre || 'U').charAt(0).toUpperCase();
+      const rolesBadges = (u.roles || []).map(r => {
+        const cls = r === 'ADMIN' ? 'badge-admin' : r === 'CONDUCTOR' ? 'badge-conductor' : r === 'CLIENTE' ? 'badge-cliente' : 'badge-usuario';
+        return `<span class="role-tag-badge ${cls}">${r}</span>`;
+      }).join(' ');
+
+      const statusBadge = u.estado === 'ACTIVO' 
+        ? `<span class="status-tag active">ACTIVO</span>` 
+        : `<span class="status-tag inactive">INACTIVO</span>`;
+
+      const regDate = u.creadoEn ? new Date(u.creadoEn).toLocaleDateString('es-SV') : 'Reciente';
+
+      return `
+        <tr data-user-id="${u.id}">
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar-circle">${initial}</div>
+              <div class="user-name-meta">
+                <strong>${u.nombre} ${u.apellido}</strong>
+                <span>ID: ${u.id.substring(0, 8)}...</span>
+              </div>
+            </div>
+          </td>
+          <td><code>${u.correo}</code></td>
+          <td>${u.telefono || '<span style="color:#94a3b8;">Sin teléfono</span>'}</td>
+          <td>${rolesBadges}</td>
+          <td>${statusBadge}</td>
+          <td>${regDate}</td>
+          <td>
+            <div class="table-actions-cell">
+              <button type="button" class="btn-table-action btn-manage-roles" data-id="${u.id}" data-name="${u.nombre} ${u.apellido}" title="Asignar Roles">
+                🛡️ Roles
+              </button>
+              <button type="button" class="btn-table-action btn-edit-user" data-id="${u.id}" title="Editar Perfil">
+                ✏️ Editar
+              </button>
+              <button type="button" class="btn-table-action btn-danger-action btn-delete-user" data-id="${u.id}" data-name="${u.nombre}" title="Eliminar Usuario">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Bind action buttons
+    usersTableBody.querySelectorAll('.btn-manage-roles').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+        const name = (e.currentTarget as HTMLElement).getAttribute('data-name') || '';
+        openRolesModal(id, name);
+      });
+    });
+
+    usersTableBody.querySelectorAll('.btn-edit-user').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+        openEditUserModal(id);
+      });
+    });
+
+    usersTableBody.querySelectorAll('.btn-delete-user').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+        const name = (e.currentTarget as HTMLElement).getAttribute('data-name') || '';
+        if (confirm(`¿Estás seguro de eliminar al usuario ${name}? Esta acción no se puede deshacer.`)) {
+          try {
+            await usuariosService.deleteUsuario(id);
+            showAdminNotice(`Usuario ${name} eliminado exitosamente.`);
+            usersList = usersList.filter(u => u.id !== id);
+            renderUsersTable();
+            updateKpis();
+          } catch (err: any) {
+            showAdminNotice('Error al eliminar usuario: ' + (err?.data?.message || err?.message), true);
+          }
+        }
+      });
+    });
+  }
+
+  userSearchInput?.addEventListener('input', renderUsersTable);
+  userRoleFilter?.addEventListener('change', renderUsersTable);
+
+  // 5. Modal de Roles
+  function openRolesModal(userId: string, userName: string) {
+    selectedUserIdForRoles = userId;
+    if (modalRolesUsername) modalRolesUsername.textContent = userName;
+    if (modalRolesUserId) modalRolesUserId.value = userId;
+
+    const user = usersList.find(u => u.id === userId);
+    const currentRoles = user?.roles || [];
+
+    document.querySelectorAll('input[name="admin_role"]').forEach(cb => {
+      const input = cb as HTMLInputElement;
+      input.checked = currentRoles.includes(input.value as any);
+    });
+
+    if (modalRoles) modalRoles.style.display = 'flex';
+  }
+
+  function closeRolesModal() {
+    if (modalRoles) modalRoles.style.display = 'none';
+  }
+
+  btnCloseRolesModal?.addEventListener('click', closeRolesModal);
+  btnCancelRoles?.addEventListener('click', closeRolesModal);
+
+  formUpdateRoles?.addEventListener('submit', async () => {
+    const checked = Array.from(document.querySelectorAll('input[name="admin_role"]:checked'))
+      .map(el => (el as HTMLInputElement).value);
+
+    if (checked.length === 0) {
+      alert('El usuario debe tener al menos un rol.');
+      return;
+    }
+
+    try {
+      await usuariosService.changeRoles(selectedUserIdForRoles, checked);
+      showAdminNotice('Roles actualizados exitosamente.');
+      closeRolesModal();
+      // Actualizar lista local
+      const u = usersList.find(x => x.id === selectedUserIdForRoles);
+      if (u) u.roles = checked as any;
+      renderUsersTable();
+      updateKpis();
+    } catch (err: any) {
+      alert('Error al actualizar roles: ' + (err?.data?.message || err?.message));
+    }
+  });
+
+  // 6. Modal de Editar Perfil
+  function openEditUserModal(userId: string) {
+    selectedUserIdForEdit = userId;
+    const user = usersList.find(u => u.id === userId);
+    if (!user) return;
+
+    if (modalEditUserId) modalEditUserId.value = user.id;
+    if (editUserNombre) editUserNombre.value = user.nombre;
+    if (editUserApellido) editUserApellido.value = user.apellido;
+    if (editUserTelefono) editUserTelefono.value = user.telefono || '+503 ';
+
+    if (modalEditUser) modalEditUser.style.display = 'flex';
+  }
+
+  function closeEditUserModal() {
+    if (modalEditUser) modalEditUser.style.display = 'none';
+  }
+
+  btnCloseEditUserModal?.addEventListener('click', closeEditUserModal);
+  btnCancelEditUser?.addEventListener('click', closeEditUserModal);
+
+  formEditUser?.addEventListener('submit', async () => {
+    const nombre = editUserNombre?.value.trim() || '';
+    const apellido = editUserApellido?.value.trim() || '';
+    const telefono = editUserTelefono?.value.trim() || '';
+
+    if (!nombre || !apellido) {
+      alert('Nombre y apellido son obligatorios.');
+      return;
+    }
+
+    try {
+      await usuariosService.updateUsuario(selectedUserIdForEdit, { nombre, apellido, telefono });
+      showAdminNotice('Perfil de usuario actualizado exitosamente.');
+      closeEditUserModal();
+      const u = usersList.find(x => x.id === selectedUserIdForEdit);
+      if (u) {
+        u.nombre = nombre;
+        u.apellido = apellido;
+        u.telefono = telefono;
+      }
+      renderUsersTable();
+    } catch (err: any) {
+      alert('Error al modificar usuario: ' + (err?.data?.message || err?.message));
+    }
+  });
+
+  // 7. Render Tabla de Rutas
+  function renderRoutesTable() {
+    if (!routesTableBody) return;
+
+    if (routesList.length === 0) {
+      routesTableBody.innerHTML = `<tr><td colspan="5" class="table-loading-row">No hay rutas en el catálogo actualmente.</td></tr>`;
+      return;
+    }
+
+    routesTableBody.innerHTML = routesList.map(r => {
+      const statusBadge = r.activo 
+        ? `<span class="status-tag active">ACTIVA</span>` 
+        : `<span class="status-tag inactive">INACTIVA</span>`;
+
+      const regDate = r.creadoEn ? new Date(r.creadoEn).toLocaleDateString('es-SV') : 'Oficial';
+
+      return `
+        <tr data-route-id="${r.id}">
+          <td><strong>${r.nombre}</strong></td>
+          <td style="max-width:320px;color:#475569;">${r.descripcion}</td>
+          <td>${statusBadge}</td>
+          <td>${regDate}</td>
+          <td>
+            <div class="table-actions-cell">
+              <button type="button" class="btn-table-action btn-toggle-route-status" data-id="${r.id}" data-active="${r.activo}">
+                ${r.activo ? '⏸️ Desactivar' : '▶️ Activar'}
+              </button>
+              <button type="button" class="btn-table-action btn-edit-route" data-id="${r.id}" data-name="${r.nombre}" data-desc="${r.descripcion}">
+                ✏️ Editar
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    routesTableBody.querySelectorAll('.btn-toggle-route-status').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+        const currentlyActive = (e.currentTarget as HTMLElement).getAttribute('data-active') === 'true';
+        try {
+          await rutasService.cambiarEstadoRuta(id, !currentlyActive);
+          showAdminNotice(`Estado de ruta actualizado a ${!currentlyActive ? 'Activa' : 'Inactiva'}.`);
+          const route = routesList.find(x => x.id === id);
+          if (route) route.activo = !currentlyActive;
+          renderRoutesTable();
+          updateKpis();
+        } catch (err: any) {
+          showAdminNotice('Error al cambiar estado de ruta: ' + (err?.data?.message || err?.message), true);
+        }
+      });
+    });
+
+    routesTableBody.querySelectorAll('.btn-edit-route').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+        const name = (e.currentTarget as HTMLElement).getAttribute('data-name') || '';
+        const desc = (e.currentTarget as HTMLElement).getAttribute('data-desc') || '';
+        openRouteModal(id, name, desc);
+      });
+    });
+  }
+
+  // 8. Modal de Crear / Editar Ruta
+  btnOpenCreateRoute?.addEventListener('click', () => {
+    openRouteModal('', '', '');
+  });
+
+  function openRouteModal(id: string, name: string, desc: string) {
+    editingRouteId = id;
+    if (modalRouteId) modalRouteId.value = id;
+    if (routeNombre) routeNombre.value = name;
+    if (routeDescripcion) routeDescripcion.value = desc;
+
+    if (modalRouteTitle) {
+      modalRouteTitle.textContent = id ? '✏️ Modificar Ruta Oficial' : '🛣️ Crear Nueva Ruta Oficial';
+    }
+
+    if (modalRoute) modalRoute.style.display = 'flex';
+  }
+
+  function closeRouteModal() {
+    if (modalRoute) modalRoute.style.display = 'none';
+  }
+
+  btnCloseRouteModal?.addEventListener('click', closeRouteModal);
+  btnCancelRoute?.addEventListener('click', closeRouteModal);
+
+  formRoute?.addEventListener('submit', async () => {
+    const nombre = routeNombre?.value.trim() || '';
+    const descripcion = routeDescripcion?.value.trim() || '';
+
+    if (!nombre || !descripcion) {
+      alert('Nombre y descripción de la ruta son requeridos.');
+      return;
+    }
+
+    try {
+      if (editingRouteId) {
+        await rutasService.actualizarRuta(editingRouteId, { nombre, descripcion });
+        showAdminNotice('Ruta oficial actualizada exitosamente.');
+      } else {
+        await rutasService.crearRuta({ nombre, descripcion });
+        showAdminNotice('Nueva ruta agregada al catálogo oficial.');
+      }
+      closeRouteModal();
+      await loadAllAdminData();
+    } catch (err: any) {
+      alert('Error con la ruta: ' + (err?.data?.message || err?.message));
+    }
+  });
+
+  // 9. Render Tabla de Viajes
+  function renderRidesTable() {
+    if (!ridesTableBody) return;
+    const search = rideSearchInput?.value.toLowerCase().trim() || '';
+    const statusFilter = rideStatusFilter?.value || 'ALL';
+
+    const filtered = ridesList.filter(r => {
+      const matchSearch = !search ||
+        (r.origenNombre && r.origenNombre.toLowerCase().includes(search)) ||
+        (r.destinoNombre && r.destinoNombre.toLowerCase().includes(search));
+
+      const matchStatus = statusFilter === 'ALL' || r.estado === statusFilter;
+      return matchSearch && matchStatus;
+    });
+
+    if (filtered.length === 0) {
+      ridesTableBody.innerHTML = `<tr><td colspan="7" class="table-loading-row">No se encontraron viajes registrados.</td></tr>`;
+      return;
+    }
+
+    ridesTableBody.innerHTML = filtered.map(r => {
+      let statusClass = 'published';
+      if (r.estado === 'CANCELADO') statusClass = 'inactive';
+      if (r.estado === 'FINALIZADO') statusClass = 'active';
+
+      return `
+        <tr data-ride-id="${r.id}">
+          <td>
+            <strong>${r.origenNombre}</strong>
+            <span style="color:#64748b;font-size:12px;display:block;">➔ ${r.destinoNombre}</span>
+          </td>
+          <td>
+            <span>${r.fechaSalida}</span>
+            <span style="color:#0F8A8B;font-weight:700;display:block;font-size:12px;">${r.horaSalida}</span>
+          </td>
+          <td>
+            <strong>${r.cuposDisponibles ?? r.cuposTotales}</strong> / ${r.cuposTotales} libres
+          </td>
+          <td>
+            <strong style="color:#0B5D67;">$${Number(r.tarifaAproximada).toFixed(2)}</strong>
+          </td>
+          <td>
+            <span class="status-tag ${statusClass}">${r.estado}</span>
+          </td>
+          <td>
+            <code style="font-size:11px;">${r.id.substring(0, 8)}...</code>
+          </td>
+          <td>
+            <div class="table-actions-cell">
+              <select class="admin-filter-select select-change-ride-status" data-id="${r.id}" style="padding:0.25rem 0.5rem;font-size:11px;">
+                <option value="" disabled selected>Cambiar estado...</option>
+                <option value="PUBLICADO">PUBLICADO</option>
+                <option value="EN_CURSO">EN_CURSO</option>
+                <option value="FINALIZADO">FINALIZADO</option>
+                <option value="CANCELADO">CANCELAR VIAJE</option>
+              </select>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    ridesTableBody.querySelectorAll('.select-change-ride-status').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const target = e.currentTarget as HTMLSelectElement;
+        const rideId = target.getAttribute('data-id') || '';
+        const nuevoEstado = target.value;
+        if (!nuevoEstado) return;
+
+        if (confirm(`¿Confirmas cambiar el estado del viaje a ${nuevoEstado}?`)) {
+          try {
+            await viajesService.cambiarEstado(rideId, nuevoEstado);
+            showAdminNotice(`Estado del viaje actualizado a ${nuevoEstado}.`);
+            const ride = ridesList.find(x => x.id === rideId);
+            if (ride) ride.estado = nuevoEstado as any;
+            renderRidesTable();
+            updateKpis();
+          } catch (err: any) {
+            showAdminNotice('Error al cambiar estado del viaje: ' + (err?.data?.message || err?.message), true);
+          }
+        }
+      });
+    });
+  }
+
+  rideSearchInput?.addEventListener('input', renderRidesTable);
+  rideStatusFilter?.addEventListener('change', renderRidesTable);
+
+  // ========================================================
+  // 9. MÓDULO DE MENSAJERÍA Y CHAT EN TIEMPO REAL (ADMIN)
+  // ========================================================
+
+  function escapeHtml(str: string): string {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatMessageTime(isoString: string): string {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  }
+
+  function formatTimeAgo(isoString: string): string {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      if (diffMins < 1) return 'Ahora';
+      if (diffMins < 60) return `${diffMins}m`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h`;
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  }
+
+  function scrollToBottom() {
+    if (chatMessagesContainer) {
+      chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    }
+  }
+
+  function initWebSocketChat() {
+    const token = authService.getToken();
+    if (!token) return;
+
+    if (stompClient) {
+      stompClient.disconnect();
+    }
+
+    stompClient = mensajeriaService.crearWebSocketClient(token, (status) => {
+      if (!wsStatusLabel || !wsPulseDot) return;
+      if (status === 'CONNECTED') {
+        wsStatusLabel.textContent = '🟢 STOMP En Vivo';
+        wsPulseDot.className = 'status-pulse-dot';
+        if (chatLiveBadge) chatLiveBadge.textContent = '🟢 Conexión Activa';
+      } else if (status === 'CONNECTING') {
+        wsStatusLabel.textContent = '🟡 Conectando STOMP...';
+        wsPulseDot.className = 'status-pulse-dot connecting';
+        if (chatLiveBadge) chatLiveBadge.textContent = '🟡 Conectando...';
+      } else {
+        wsStatusLabel.textContent = '🔴 Desconectado (Sondeo)';
+        wsPulseDot.className = 'status-pulse-dot disconnected';
+        if (chatLiveBadge) chatLiveBadge.textContent = '⚪ Modo Sondeo';
+      }
+    });
+
+    stompClient.connect();
+
+    // Suscribirse al canal global para actualizar la lista de conversaciones
+    stompClient.subscribe('/topic/conversaciones', (msg: MensajeResponse) => {
+      const existing = conversationsList.find(c => c.id === msg.conversacionId);
+      if (existing) {
+        existing.ultimoMensaje = msg.contenido;
+        existing.ultimoMensajeEn = msg.enviadoEn;
+        existing.totalMensajes = (Number(existing.totalMensajes) || 0) + 1;
+      } else {
+        mensajeriaService.listarTodasAdmin().then(list => {
+          conversationsList = list;
+          renderConversationsList();
+        }).catch(() => {});
+      }
+      renderConversationsList();
+
+      if (activeConversationId === msg.conversacionId) {
+        if (!activeConversationMessages.some(m => m.id === msg.id)) {
+          activeConversationMessages.push(msg);
+          appendMessageToDom(msg);
+          scrollToBottom();
+        }
+      }
+    });
+  }
+
+  function renderConversationsList() {
+    if (!chatThreadsList) return;
+
+    const query = (chatSearchInput?.value || '').trim().toLowerCase();
+    let filtered = conversationsList.filter(c => {
+      const matchesSearch = !query || 
+        (c.origen && c.origen.toLowerCase().includes(query)) ||
+        (c.destino && c.destino.toLowerCase().includes(query)) ||
+        (c.conductorNombre && c.conductorNombre.toLowerCase().includes(query)) ||
+        (c.ultimoMensaje && c.ultimoMensaje.toLowerCase().includes(query));
+
+      const matchesFilter = threadsFilterMode === 'ALL' || (Number(c.totalMensajes) > 0);
+      return matchesSearch && matchesFilter;
+    });
+
+    if (badgeMessagesCount) {
+      badgeMessagesCount.textContent = String(conversationsList.length);
+    }
+
+    const countBadge = document.getElementById('threads-total-count');
+    if (countBadge) countBadge.textContent = String(conversationsList.length);
+
+    if (filtered.length === 0) {
+      chatThreadsList.innerHTML = `
+        <div class="chat-thread-empty">
+          <p>No se encontraron conversaciones activas.</p>
+          <button type="button" class="btn btn-outline btn-xs" id="btn-quick-open-first-chat">
+            + Iniciar Conversación de Viaje
+          </button>
+        </div>
+      `;
+      document.getElementById('btn-quick-open-first-chat')?.addEventListener('click', openTicketModal);
+      return;
+    }
+
+    chatThreadsList.innerHTML = filtered.map(c => {
+      const isActive = c.id === activeConversationId;
+      const timeFormatted = formatTimeAgo(c.ultimoMensajeEn || c.creadoEn);
+      return `
+        <div class="thread-card ${isActive ? 'active' : ''}" data-conv-id="${c.id}">
+          <div class="thread-card-top">
+            <span class="thread-route-title" title="${c.origen} ➔ ${c.destino}">${c.origen} ➔ ${c.destino}</span>
+            <span class="thread-time">${timeFormatted}</span>
+          </div>
+          <div class="thread-driver-row">
+            <span>🚗 ${c.conductorNombre || 'Conductor'}</span>
+          </div>
+          <div class="thread-preview-row">
+            <span class="thread-preview-text">${escapeHtml(c.ultimoMensaje || 'Sin mensajes')}</span>
+            <span class="thread-count-badge" title="${c.totalMensajes} mensajes">${c.totalMensajes || 0}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    chatThreadsList.querySelectorAll('.thread-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const convId = card.getAttribute('data-conv-id');
+        if (convId) openConversation(convId);
+      });
+    });
+  }
+
+  async function openConversation(convId: string) {
+    activeConversationId = convId;
+    renderConversationsList();
+
+    const conv = conversationsList.find(c => c.id === convId);
+    if (!conv) return;
+
+    if (chatEmptyState) chatEmptyState.style.display = 'none';
+    if (chatActiveContainer) chatActiveContainer.style.display = 'flex';
+
+    if (chatHeaderRoute) chatHeaderRoute.textContent = `${conv.origen} ➔ ${conv.destino}`;
+    if (chatHeaderTripId) chatHeaderTripId.textContent = `Viaje: #${conv.viajeId.slice(0, 8)}`;
+    if (chatHeaderDriver) chatHeaderDriver.textContent = `Conductor: ${conv.conductorNombre || 'Verificado'}`;
+    if (chatHeaderParticipants) {
+      const count = conv.participantesIds?.length || 1;
+      chatHeaderParticipants.textContent = `${count} participante${count === 1 ? '' : 's'}`;
+    }
+
+    if (chatMessagesContainer) {
+      chatMessagesContainer.innerHTML = '<div class="chat-thread-loading">Cargando mensajes...</div>';
+    }
+
+    try {
+      const mensajes = await mensajeriaService.obtenerMensajes(convId);
+      activeConversationMessages = mensajes;
+      renderMessages(mensajes);
+      scrollToBottom();
+    } catch (err) {
+      if (chatMessagesContainer) {
+        chatMessagesContainer.innerHTML = '<div class="chat-thread-loading">Error al cargar historial de mensajes.</div>';
+      }
+    }
+
+    // Suscribir a la sala de conversación específica
+    if (activeRoomUnsubscribe) {
+      activeRoomUnsubscribe();
+      activeRoomUnsubscribe = null;
+    }
+    if (stompClient) {
+      activeRoomUnsubscribe = stompClient.subscribe(`/topic/conversaciones/${convId}`, (msg: MensajeResponse) => {
+        if (!activeConversationMessages.some(m => m.id === msg.id)) {
+          activeConversationMessages.push(msg);
+          appendMessageToDom(msg);
+          scrollToBottom();
+        }
+      });
+    }
+  }
+
+  function renderMessages(mensajes: MensajeResponse[]) {
+    if (!chatMessagesContainer) return;
+    if (mensajes.length === 0) {
+      chatMessagesContainer.innerHTML = `
+        <div class="chat-thread-empty">
+          <p>No hay mensajes en esta conversación todavía.</p>
+          <span style="font-size: 0.8rem; opacity: 0.75;">Sé el primero en enviar un mensaje a los participantes del viaje.</span>
+        </div>
+      `;
+      return;
+    }
+    chatMessagesContainer.innerHTML = '';
+    mensajes.forEach(msg => appendMessageToDom(msg));
+  }
+
+  function appendMessageToDom(msg: MensajeResponse) {
+    if (!chatMessagesContainer) return;
+    const isMsgEmptyHolder = chatMessagesContainer.querySelector('.chat-thread-empty');
+    if (isMsgEmptyHolder) chatMessagesContainer.innerHTML = '';
+
+    const isAdmin = msg.remitenteRol === 'ADMIN';
+    const isConductor = msg.remitenteRol === 'CONDUCTOR';
+
+    let roleLabel = '👤 Pasajero';
+    let senderClass = 'msg-sender-passenger';
+    let bubbleClass = 'msg-bubble-passenger';
+
+    if (isAdmin) {
+      roleLabel = '🛡️ Soporte Admin';
+      senderClass = 'msg-sender-admin';
+      bubbleClass = 'msg-bubble-admin';
+    } else if (isConductor) {
+      roleLabel = '🚗 Conductor';
+      senderClass = 'msg-sender-driver';
+      bubbleClass = 'msg-bubble-driver';
+    }
+
+    const timeStr = formatMessageTime(msg.enviadoEn);
+
+    const row = document.createElement('div');
+    row.className = `chat-msg-row ${isAdmin ? 'msg-admin' : 'msg-other'}`;
+    row.setAttribute('data-msg-id', msg.id);
+
+    row.innerHTML = `
+      <div class="${bubbleClass}">
+        <div class="msg-sender-meta">
+          <span class="${senderClass}">${roleLabel}</span>
+          ${!isAdmin && msg.remitenteNombre ? `<span style="opacity: 0.8;">· ${escapeHtml(msg.remitenteNombre)}</span>` : ''}
+        </div>
+        <div class="msg-body-text">${escapeHtml(msg.contenido)}</div>
+        <div class="msg-footer-time">${timeStr}</div>
+      </div>
+    `;
+
+    chatMessagesContainer.appendChild(row);
+  }
+
+  async function sendMessage() {
+    if (!activeConversationId || !chatMessageInput) return;
+    const text = chatMessageInput.value.trim();
+    if (!text) return;
+
+    chatMessageInput.value = '';
+    chatMessageInput.focus();
+
+    try {
+      const enviado = await mensajeriaService.enviarMensaje(activeConversationId, text);
+      if (!activeConversationMessages.some(m => m.id === enviado.id)) {
+        activeConversationMessages.push(enviado);
+        appendMessageToDom(enviado);
+        scrollToBottom();
+      }
+      const target = conversationsList.find(c => c.id === activeConversationId);
+      if (target) {
+        target.ultimoMensaje = enviado.contenido;
+        target.ultimoMensajeEn = enviado.enviadoEn;
+        target.totalMensajes = (Number(target.totalMensajes) || 0) + 1;
+        renderConversationsList();
+      }
+    } catch (err: any) {
+      showAdminNotice('Error al enviar mensaje: ' + (err?.data?.message || err?.message), true);
+    }
+  }
+
+  formChatSend?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendMessage();
+  });
+
+  chatSearchInput?.addEventListener('input', () => {
+    renderConversationsList();
+  });
+
+  filterThreadsAll?.addEventListener('click', () => {
+    threadsFilterMode = 'ALL';
+    filterThreadsAll.classList.add('active');
+    filterThreadsActive?.classList.remove('active');
+    renderConversationsList();
+  });
+
+  filterThreadsActive?.addEventListener('click', () => {
+    threadsFilterMode = 'ACTIVE';
+    filterThreadsActive.classList.add('active');
+    filterThreadsAll?.classList.remove('active');
+    renderConversationsList();
+  });
+
+  btnRefreshMessages?.addEventListener('click', async () => {
+    showAdminNotice('Sincronizando mensajería y salas en tiempo real...');
+    try {
+      conversationsList = await mensajeriaService.listarTodasAdmin();
+      renderConversationsList();
+      if (activeConversationId) {
+        await openConversation(activeConversationId);
+      }
+    } catch (err: any) {
+      showAdminNotice('Error al actualizar mensajería: ' + (err?.message || ''), true);
+    }
+  });
+
+  // Modal "+ Abrir Sala por Viaje"
+  function openTicketModal() {
+    if (!modalNewTicket || !selectTicketViaje) return;
+    selectTicketViaje.innerHTML = '<option value="">Selecciona un viaje publicado...</option>' + 
+      ridesList.map(v => `
+        <option value="${v.id}">${v.origenNombre} ➔ ${v.destinoNombre} (${v.fechaSalida} ${v.horaSalida}) - $${Number(v.tarifaAproximada).toFixed(2)}</option>
+      `).join('');
+    modalNewTicket.style.display = 'flex';
+  }
+
+  function closeTicketModal() {
+    if (modalNewTicket) modalNewTicket.style.display = 'none';
+    if (formOpenTicket) (formOpenTicket as HTMLFormElement).reset();
+  }
+
+  btnOpenNewTicket?.addEventListener('click', openTicketModal);
+  btnEmptyOpenChat?.addEventListener('click', openTicketModal);
+  btnCloseTicketModal?.addEventListener('click', closeTicketModal);
+  btnCancelTicket?.addEventListener('click', closeTicketModal);
+
+  formOpenTicket?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectTicketViaje) return;
+    const viajeId = selectTicketViaje.value;
+    if (!viajeId) {
+      alert('Por favor selecciona un viaje para abrir la conversación.');
+      return;
+    }
+
+    try {
+      showAdminNotice('Abriendo sala de chat para el viaje...');
+      const conv = await mensajeriaService.obtenerOCrearPorViaje(viajeId);
+      
+      const initialText = ticketInitialMsg?.value.trim();
+      if (initialText) {
+        await mensajeriaService.enviarMensaje(conv.id, initialText);
+      }
+
+      closeTicketModal();
+      showAdminNotice('Sala de chat abierta exitosamente.');
+      
+      // Recargar lista y abrir conversación
+      conversationsList = await mensajeriaService.listarTodasAdmin();
+      renderConversationsList();
+      await openConversation(conv.id);
+    } catch (err: any) {
+      showAdminNotice('Error al crear sala de chat: ' + (err?.data?.message || err?.message), true);
+    }
+  });
+
+  // Quick responses
+  document.querySelectorAll('.reply-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const reply = chip.getAttribute('data-reply');
+      if (reply && chatMessageInput) {
+        chatMessageInput.value = reply;
+        sendMessage();
+      }
+    });
+  });
+
+  // 10. Cambio de Pestañas
+  document.querySelectorAll('.admin-tab-btn').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      document.querySelectorAll('.admin-tab-btn').forEach(t => t.classList.remove('active'));
+      (e.currentTarget as HTMLElement).classList.add('active');
+
+      const targetPaneId = (e.currentTarget as HTMLElement).getAttribute('data-tab');
+      document.querySelectorAll('.admin-tab-pane').forEach(p => {
+        (p as HTMLElement).style.display = 'none';
+        p.classList.remove('active');
+      });
+
+      if (targetPaneId) {
+        const targetPane = document.getElementById(targetPaneId);
+        if (targetPane) {
+          targetPane.style.display = 'block';
+          targetPane.classList.add('active');
+        }
+      }
+    });
+  });
+
+  // Inicializar al cargar
+  checkAdminAuth();
+</script>

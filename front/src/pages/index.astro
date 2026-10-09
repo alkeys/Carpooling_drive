@@ -1,0 +1,35 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Hero from '../components/Hero.astro';
+import RidesSection from '../components/RidesSection.astro';
+import PopularRoutes from '../components/PopularRoutes.astro';
+import SafetyFeatures from '../components/SafetyFeatures.astro';
+import SavingsCalculator from '../components/SavingsCalculator.astro';
+import HowItWorks from '../components/HowItWorks.astro';
+import DriverCTA from '../components/DriverCTA.astro';
+import BookingModal from '../components/BookingModal.astro';
+import TripChatModal from '../components/TripChatModal.astro';
+import AuthModal from '../components/AuthModal.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout 
+  title="Rutea | Carpooling Fresco, Seguro y Costero en El Salvador"
+  description="Plataforma de viajes compartidos en El Salvador. Viaja fresco y seguro conectando con conductores y pasajeros verificados. Ahorra costos y viaja hacia Surf City, San Salvador y más."
+>
+  <Navbar />
+  <main id="main-content">
+    <Hero />
+    <RidesSection />
+    <PopularRoutes />
+    <SafetyFeatures />
+    <SavingsCalculator />
+    <HowItWorks />
+    <DriverCTA />
+  </main>
+  <Footer />
+  <BookingModal />
+  <TripChatModal />
+  <AuthModal />
+</Layout>

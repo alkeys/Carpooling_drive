@@ -23,6 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -46,10 +50,13 @@ public class SecurityConfig {
                 .accessDeniedHandler(customAccessDeniedHandler())
             )
             .authorizeHttpRequests(auth -> auth
+                // Preflight CORS y solicitudes OPTIONS
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // 1. Endpoints Bloqueados / Denegados (Lista negra)
                 .requestMatchers(SecurityEndpoints.BLOCKED_URLS).denyAll()
-                // 2. Endpoints Públicos GET (Swagger, Docs, Actuator)
+                // 2. Endpoints Públicos GET y HEAD (Swagger, Docs, Actuator)
                 .requestMatchers(HttpMethod.GET, SecurityEndpoints.PUBLIC_GET_URLS).permitAll()
+                .requestMatchers(HttpMethod.HEAD, SecurityEndpoints.PUBLIC_GET_URLS).permitAll()
                 // 3. Endpoints Públicos POST (Login, Logout, Registro de Usuarios)
                 .requestMatchers(HttpMethod.POST, SecurityEndpoints.PUBLIC_POST_URLS).permitAll()
                 // 4. Manejo de errores y handshake de WebSockets
@@ -124,5 +131,20 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Set-Cookie", "Authorization", "X-Total-Count"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

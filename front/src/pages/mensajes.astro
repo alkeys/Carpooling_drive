@@ -1,0 +1,1184 @@
+---
+// mensajes.astro - Centro de Mensajería para Viajes y Confirmación de Selección en Vivo
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import AuthModal from '../components/AuthModal.astro';
+---
+
+<Layout 
+  title="Mensajes & Confirmación de Viajes | Rutea El Salvador"
+  description="Coordina detalles con conductores y pasajeros en tiempo real mediante chat en vivo y confirma la selección de asientos."
+>
+  <Navbar />
+
+  <main class="chat-hub-page">
+    <div class="container-fluid chat-hub-container">
+      
+      <!-- Auth Gate -->
+      <section class="auth-gate-card glass-card" id="chat-auth-gate" style="display: none;">
+        <div class="gate-icon">🔒</div>
+        <div class="gate-content">
+          <h3>Inicia sesión para ver tus mensajes</h3>
+          <p>La mensajería de viajes es privada y exclusiva para conductores y pasajeros autenticados.</p>
+          <button type="button" class="btn btn-primary" id="btn-gate-open-login">
+            Iniciar Sesión
+          </button>
+        </div>
+      </section>
+
+      <!-- Main Chat Interface -->
+      <div class="chat-app-window glass-card" id="chat-app-window">
+        
+        <!-- SIDEBAR DE CONVERSACIONES -->
+        <aside class="chat-sidebar" id="chat-sidebar">
+          <div class="sidebar-top-bar">
+            <div class="sidebar-title-row">
+              <h2>💬 Chats de Viajes</h2>
+              <span class="stomp-live-chip" id="stomp-live-chip" title="Estado de la conexión en vivo">
+                <span class="pulse-dot" id="sidebar-pulse-dot"></span>
+                <span id="stomp-status-text">Conectando...</span>
+              </span>
+            </div>
+
+            <div class="search-chat-wrap">
+              <input 
+                type="text" 
+                id="search-conversations-input" 
+                placeholder="Buscar por ruta o ciudad..." 
+                class="search-chat-input" 
+              />
+            </div>
+          </div>
+
+          <!-- Lista de Chats -->
+          <div class="conversations-list-container" id="conversations-list-container">
+            <div class="sidebar-loading-indicator" id="sidebar-loading-indicator">
+              <div class="mini-spinner"></div>
+              <span>Cargando conversaciones...</span>
+            </div>
+          </div>
+
+          <!-- Enlaces Rápidos Inferiores -->
+          <div class="sidebar-bottom-bar">
+            <a href="/mis-viajes" class="sidebar-nav-item">
+              <span>🚗 Mis Viajes (Conductor)</span>
+            </a>
+            <a href="/viajes-seleccionados" class="sidebar-nav-item">
+              <span>🎟️ Viajes Seleccionados</span>
+            </a>
+          </div>
+        </aside>
+
+        <!-- ÁREA PRINCIPAL DE CONVERSACIÓN Y CONFIRMACIÓN -->
+        <section class="chat-main-area" id="chat-main-area">
+          
+          <!-- Vista Vacía (Sin chat seleccionado) -->
+          <div class="chat-placeholder-view" id="chat-placeholder-view">
+            <div class="placeholder-icon">🌊</div>
+            <h3>Selecciona una conversación de viaje</h3>
+            <p>
+              Comunícate con tu conductor o pasajeros, aclara puntos de encuentro y 
+              <strong>confirma las solicitudes de asientos</strong> en tiempo real.
+            </p>
+            <div class="placeholder-shortcuts">
+              <a href="/mis-viajes" class="btn btn-outline btn-sm">Ver Mis Viajes Publicados</a>
+              <a href="/viajes-seleccionados" class="btn btn-primary btn-sm">Ver Mis Reservas</a>
+            </div>
+          </div>
+
+          <!-- Panel de Chat Activo -->
+          <div class="active-chat-content" id="active-chat-content" style="display: none;">
+            
+            <!-- 1. Header del Chat -->
+            <header class="active-chat-header">
+              <div class="header-left-col">
+                <button type="button" class="btn-back-sidebar" id="btn-back-sidebar" aria-label="Volver a la lista de chats">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                </button>
+                <div class="header-titles">
+                  <h3 class="active-route-name" id="active-route-name">Cargando ruta...</h3>
+                  <span class="active-route-meta" id="active-route-meta">Horario y detalles</span>
+                </div>
+              </div>
+
+              <div class="header-right-col">
+                <span class="chat-badge-verified" id="chat-badge-verified">🚗 Viaje Oficial</span>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-chat-messages" title="Refrescar mensajes">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <!-- 2. BANNER DE CONFIRMACIÓN DE SELECCIÓN (Conductor / Pasajero) -->
+            <div class="selection-confirmation-panel" id="selection-confirmation-panel" style="display: none;">
+              <!-- Se inyecta dinámicamente si hay solicitudes para este viaje -->
+            </div>
+
+            <!-- 3. Mensajes Timeline -->
+            <div class="chat-messages-scroll" id="chat-messages-scroll">
+              <!-- Burbujas renderizadas dinámicamente -->
+            </div>
+
+            <!-- 4. Barra de Envío de Mensajes -->
+            <footer class="chat-input-bar">
+              <form class="chat-input-form" id="chat-input-form" onsubmit="return false;">
+                <input 
+                  type="text" 
+                  id="chat-message-input" 
+                  placeholder="Escribe un mensaje para coordinar la salida o punto de encuentro..." 
+                  class="chat-text-input" 
+                  autocomplete="off" 
+                />
+                <button type="submit" class="btn btn-primary btn-send-message" id="btn-send-message">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                  <span>Enviar</span>
+                </button>
+              </form>
+            </footer>
+
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <AuthModal />
+</Layout>
+
+<style>
+  .chat-hub-page {
+    padding: 1.5rem 0 3rem;
+    min-height: calc(100vh - 72px);
+    background: radial-gradient(circle at 10% 10%, rgba(143, 214, 200, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(11, 93, 103, 0.08) 0%, transparent 40%);
+  }
+
+  .chat-hub-container {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  /* Auth Gate Card */
+  .auth-gate-card {
+    text-align: center;
+    padding: 3.5rem 2rem;
+    border-radius: var(--radius-xl);
+    max-width: 540px;
+    margin: 4rem auto;
+  }
+
+  .gate-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .auth-gate-card h3 {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-gate-card p {
+    color: var(--color-slate-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  /* Ventana Principal de Chat (App Layout) */
+  .chat-app-window {
+    display: flex;
+    height: 78vh;
+    min-height: 580px;
+    background: #FFFFFF;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(143, 214, 200, 0.4);
+    box-shadow: 0 12px 36px -8px rgba(11, 93, 103, 0.12);
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .chat-sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(143, 214, 200, 0.3);
+    background: rgba(248, 250, 252, 0.95);
+  }
+
+  .sidebar-top-bar {
+    padding: 1.2rem;
+    border-bottom: 1px solid rgba(143, 214, 200, 0.25);
+  }
+
+  .sidebar-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
+  }
+
+  .sidebar-title-row h2 {
+    font-size: 1.25rem;
+    font-family: var(--font-display);
+    color: var(--color-primary);
+    margin: 0;
+  }
+
+  .stomp-live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #0F8A8B;
+    background: rgba(15, 138, 139, 0.1);
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full);
+  }
+
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+    animation: pulse 1.8s infinite;
+  }
+
+  .pulse-dot.connecting {
+    background: #F59E0B;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.8; }
+  }
+
+  .search-chat-wrap {
+    width: 100%;
+  }
+
+  .search-chat-input {
+    width: 100%;
+    padding: 0.55rem 0.9rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(143, 214, 200, 0.45);
+    background: #FFFFFF;
+    font-size: 0.86rem;
+    outline: none;
+    transition: all var(--transition-fast);
+  }
+
+  .search-chat-input:focus {
+    border-color: var(--color-ocean);
+    box-shadow: 0 0 0 3px rgba(15, 138, 139, 0.15);
+  }
+
+  .conversations-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .sidebar-loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 2.5rem 1rem;
+    color: var(--color-slate-muted);
+    font-size: 0.86rem;
+  }
+
+  .mini-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(15, 138, 139, 0.2);
+    border-top-color: var(--color-ocean);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* Conversation Item in List */
+  :global(.conversation-list-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    background: #FFFFFF;
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+    text-align: left;
+    width: 100%;
+  }
+
+  :global(.conversation-list-item:hover) {
+    background: rgba(143, 214, 200, 0.15);
+    border-color: rgba(143, 214, 200, 0.4);
+  }
+
+  :global(.conversation-list-item.active) {
+    background: rgba(11, 93, 103, 0.08);
+    border-color: var(--color-ocean);
+    box-shadow: 0 2px 6px rgba(11, 93, 103, 0.08);
+  }
+
+  :global(.item-avatar-icon) {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #0B5D67;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  :global(.item-info-col) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  :global(.item-route-title) {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-slate);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.item-sub-meta) {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+    margin-top: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Sidebar Bottom Links */
+  .sidebar-bottom-bar {
+    padding: 0.85rem 1rem;
+    border-top: 1px solid rgba(143, 214, 200, 0.25);
+    background: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .sidebar-nav-item {
+    font-size: 0.82rem;
+    color: var(--color-ocean);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color var(--transition-fast);
+  }
+
+  .sidebar-nav-item:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  /* Main Chat Area */
+  .chat-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+
+  /* Placeholder View */
+  .chat-placeholder-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2.5rem;
+  }
+
+  .placeholder-icon {
+    font-size: 3.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .chat-placeholder-view h3 {
+    font-size: 1.6rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .chat-placeholder-view p {
+    color: var(--color-slate-muted);
+    max-width: 440px;
+    margin-bottom: 1.8rem;
+    line-height: 1.5;
+  }
+
+  .placeholder-shortcuts {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  /* Active Chat Content */
+  .active-chat-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .active-chat-header {
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid rgba(143, 214, 200, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .header-left-col {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .btn-back-sidebar {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--color-slate);
+    cursor: pointer;
+    padding: 0.3rem;
+  }
+
+  .active-route-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-slate);
+    margin: 0;
+  }
+
+  .active-route-meta {
+    font-size: 0.82rem;
+    color: var(--color-slate-muted);
+  }
+
+  .header-right-col {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .chat-badge-verified {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0F8A8B;
+    background: rgba(15, 138, 139, 0.12);
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
+  }
+
+  /* PANEL DE CONFIRMACIÓN DE SELECCIÓN EN EL CHAT */
+  .selection-confirmation-panel {
+    background: rgba(245, 158, 11, 0.08);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+    padding: 0.85rem 1.4rem;
+  }
+
+  :global(.chat-confirm-banner) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  :global(.confirm-meta-text) {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-size: 0.88rem;
+    color: #92400E;
+  }
+
+  :global(.confirm-passenger-badge) {
+    font-weight: 700;
+    color: #78350F;
+  }
+
+  :global(.chat-confirm-actions) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  :global(.btn-chat-confirm-accept) {
+    background: #0B5D67;
+    color: #FFFFFF;
+    border: none;
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  :global(.btn-chat-confirm-accept:hover) {
+    background: #0F8A8B;
+  }
+
+  :global(.btn-chat-confirm-reject) {
+    background: transparent;
+    color: #DC2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  :global(.passenger-confirmed-pill) {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #059669;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* Mensajes Scroll Area */
+  .chat-messages-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    background: radial-gradient(circle at 50% 50%, rgba(248, 250, 252, 0.7) 0%, #FFFFFF 100%);
+  }
+
+  :global(.chat-bubble-row) {
+    display: flex;
+    flex-direction: column;
+    max-width: 72%;
+  }
+
+  :global(.chat-bubble-row.outgoing) {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  :global(.chat-bubble-row.incoming) {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+
+  :global(.bubble-sender-meta) {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+    padding: 0 0.35rem;
+  }
+
+  :global(.sender-badge) {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.45rem;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+  }
+
+  :global(.sender-driver) {
+    background: rgba(15, 138, 139, 0.15);
+    color: #0F8A8B;
+  }
+
+  :global(.sender-passenger) {
+    background: rgba(226, 232, 240, 0.8);
+    color: #475569;
+  }
+
+  :global(.sender-admin) {
+    background: rgba(217, 119, 6, 0.15);
+    color: #D97706;
+  }
+
+  :global(.bubble-body) {
+    padding: 0.75rem 1.1rem;
+    border-radius: 14px;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    word-break: break-word;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  }
+
+  :global(.outgoing .bubble-body) {
+    background: #0B5D67;
+    color: #FFFFFF;
+    border-bottom-right-radius: 3px;
+  }
+
+  :global(.incoming .bubble-body) {
+    background: #F1F5F9;
+    color: var(--color-slate);
+    border-bottom-left-radius: 3px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+  }
+
+  :global(.bubble-time) {
+    font-size: 0.68rem;
+    color: rgba(148, 163, 184, 0.9);
+    margin-top: 0.25rem;
+    padding: 0 0.35rem;
+  }
+
+  /* Input Bar */
+  .chat-input-bar {
+    padding: 1rem 1.4rem;
+    border-top: 1px solid rgba(143, 214, 200, 0.3);
+    background: #FFFFFF;
+  }
+
+  .chat-input-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .chat-text-input {
+    flex: 1;
+    padding: 0.75rem 1.2rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(143, 214, 200, 0.5);
+    outline: none;
+    font-size: 0.94rem;
+    transition: all var(--transition-fast);
+  }
+
+  .chat-text-input:focus {
+    border-color: var(--color-ocean);
+    box-shadow: 0 0 0 3px rgba(15, 138, 139, 0.15);
+  }
+
+  .btn-send-message {
+    padding: 0.75rem 1.3rem;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 700;
+  }
+
+  @media (max-width: 768px) {
+    .chat-app-window {
+      height: 82vh;
+      border-radius: var(--radius-lg);
+    }
+    .chat-sidebar {
+      width: 100%;
+    }
+    .btn-back-sidebar {
+      display: inline-flex;
+    }
+    .chat-main-area.mobile-hidden {
+      display: none;
+    }
+    .chat-sidebar.mobile-hidden {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import { 
+    authService, 
+    mensajeriaService, 
+    viajesService, 
+    solicitudesService, 
+    StompChatClient, 
+    type ConversacionResponse, 
+    type MensajeResponse, 
+    type ViajeResponse,
+    type SolicitudResponse
+  } from '../services';
+
+  const authGate = document.getElementById('chat-auth-gate');
+  const chatWindow = document.getElementById('chat-app-window');
+  const btnGateLogin = document.getElementById('btn-gate-open-login');
+
+  const sidebarPulseDot = document.getElementById('sidebar-pulse-dot');
+  const stompStatusText = document.getElementById('stomp-status-text');
+  const conversationsContainer = document.getElementById('conversations-list-container');
+  const sidebarLoading = document.getElementById('sidebar-loading-indicator');
+  const searchInput = document.getElementById('search-conversations-input') as HTMLInputElement | null;
+
+  const chatPlaceholder = document.getElementById('chat-placeholder-view');
+  const activeChatContent = document.getElementById('active-chat-content');
+  const activeRouteName = document.getElementById('active-route-name');
+  const activeRouteMeta = document.getElementById('active-route-meta');
+  const btnRefreshMessages = document.getElementById('btn-refresh-chat-messages');
+  const btnBackSidebar = document.getElementById('btn-back-sidebar');
+
+  const confirmationPanel = document.getElementById('selection-confirmation-panel');
+  const messagesScroll = document.getElementById('chat-messages-scroll');
+  const chatInputForm = document.getElementById('chat-input-form');
+  const messageInput = document.getElementById('chat-message-input') as HTMLInputElement | null;
+
+  let stompClient: StompChatClient | null = null;
+  let conversations: ConversacionResponse[] = [];
+  let currentConv: ConversacionResponse | null = null;
+  let currentTrip: ViajeResponse | null = null;
+  let activeUnsubscribe: (() => void) | null = null;
+  let tripRequests: SolicitudResponse[] = [];
+  let tripsCache: Map<string, ViajeResponse> = new Map();
+
+  function checkAuth() {
+    if (!authService.isAuthenticated()) {
+      if (authGate) authGate.style.display = 'block';
+      if (chatWindow) chatWindow.style.display = 'none';
+      return false;
+    }
+    if (authGate) authGate.style.display = 'none';
+    if (chatWindow) chatWindow.style.display = 'flex';
+    return true;
+  }
+
+  btnGateLogin?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('request-auth-required', {
+      detail: { action: 'acceder a la mensajería de viajes' }
+    }));
+  });
+
+  window.addEventListener('auth-state-changed', (e: any) => {
+    if (checkAuth()) {
+      initChatHub();
+    }
+  });
+
+  if (checkAuth()) {
+    initChatHub();
+  }
+
+  async function initChatHub() {
+    initWebSocket();
+    await loadUserConversations();
+    checkUrlQueryParams();
+  }
+
+  // WebSocket STOMP
+  function initWebSocket() {
+    const token = authService.getToken();
+    if (!token) return;
+
+    if (stompClient) stompClient.disconnect();
+
+    stompClient = mensajeriaService.crearWebSocketClient(token, (status) => {
+      if (!stompStatusText || !sidebarPulseDot) return;
+      if (status === 'CONNECTED') {
+        stompStatusText.textContent = 'En Vivo';
+        sidebarPulseDot.className = 'pulse-dot';
+      } else if (status === 'CONNECTING') {
+        stompStatusText.textContent = 'Conectando...';
+        sidebarPulseDot.className = 'pulse-dot connecting';
+      } else {
+        stompStatusText.textContent = 'Desconectado';
+        sidebarPulseDot.className = 'pulse-dot connecting';
+      }
+    });
+
+    stompClient.connect();
+  }
+
+  // Cargar lista de conversaciones
+  async function loadUserConversations() {
+    try {
+      if (sidebarLoading) sidebarLoading.style.display = 'flex';
+      conversations = await mensajeriaService.obtenerMisConversaciones();
+
+      // Cargar detalles de viajes asociados
+      const promises = conversations.map(async (c) => {
+        if (!tripsCache.has(c.viajeId)) {
+          try {
+            const trip = await viajesService.getViajeById(c.viajeId);
+            tripsCache.set(c.viajeId, trip);
+          } catch {}
+        }
+      });
+      await Promise.all(promises);
+
+      renderConversationsList();
+    } catch (err) {
+      console.error('Error cargando conversaciones:', err);
+    } finally {
+      if (sidebarLoading) sidebarLoading.style.display = 'none';
+    }
+  }
+
+  // Renderizar lista en Sidebar
+  function renderConversationsList() {
+    if (!conversationsContainer) return;
+
+    const q = (searchInput?.value || '').trim().toLowerCase();
+    const filtered = conversations.filter(c => {
+      const trip = tripsCache.get(c.viajeId);
+      const text = `${trip?.origenNombre || ''} ${trip?.destinoNombre || ''}`.toLowerCase();
+      return text.includes(q);
+    });
+
+    if (filtered.length === 0) {
+      conversationsContainer.innerHTML = `
+        <div style="text-align:center;padding:2rem 1rem;color:#64748B;font-size:0.86rem;">
+          No tienes chats de viajes activos aún.
+        </div>
+      `;
+      return;
+    }
+
+    conversationsContainer.innerHTML = filtered.map(c => {
+      const trip = tripsCache.get(c.viajeId);
+      const title = trip ? `${trip.origenNombre} ➔ ${trip.destinoNombre}` : `Viaje #${c.viajeId.substring(0, 6)}`;
+      const dateStr = trip ? `${trip.fechaSalida} · ${trip.horaSalida}` : 'Coordinación';
+      const isActive = currentConv?.id === c.id;
+
+      return `
+        <button 
+          type="button" 
+          class="conversation-list-item ${isActive ? 'active' : ''}" 
+          data-conv-id="${c.id}"
+          data-trip-id="${c.viajeId}"
+        >
+          <div class="item-avatar-icon">🚗</div>
+          <div class="item-info-col">
+            <span class="item-route-title">${title}</span>
+            <span class="item-sub-meta">${dateStr}</span>
+          </div>
+        </button>
+      `;
+    }).join('');
+
+    // Click handler en cada item
+    document.querySelectorAll('.conversation-list-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const convId = item.getAttribute('data-conv-id');
+        const selected = conversations.find(c => c.id === convId);
+        if (selected) selectConversation(selected);
+      });
+    });
+  }
+
+  // Selección de conversación
+  async function selectConversation(conv: ConversacionResponse) {
+    currentConv = conv;
+    renderConversationsList();
+
+    if (chatPlaceholder) chatPlaceholder.style.display = 'none';
+    if (activeChatContent) activeChatContent.style.display = 'flex';
+
+    // Cargar viaje
+    try {
+      currentTrip = tripsCache.get(conv.viajeId) || await viajesService.getViajeById(conv.viajeId);
+      tripsCache.set(conv.viajeId, currentTrip);
+    } catch {
+      currentTrip = null;
+    }
+
+    if (activeRouteName) {
+      activeRouteName.textContent = currentTrip ? `${currentTrip.origenNombre} ➔ ${currentTrip.destinoNombre}` : 'Sala de Chat del Viaje';
+    }
+    if (activeRouteMeta) {
+      activeRouteMeta.textContent = currentTrip ? `${currentTrip.fechaSalida} · Salida: ${currentTrip.horaSalida} · Cupos: ${currentTrip.cuposDisponibles}` : 'Coordinación general';
+    }
+
+    // Cargar solicitudes de cupo para confirmar selección
+    await loadTripSelectionConfirmation(conv.viajeId);
+
+    // Cargar historial de mensajes
+    await loadMessages(conv.id);
+
+    // Suscribir STOMP en tiempo real
+    subscribeToConversation(conv);
+
+    // Responsive en mobile
+    document.getElementById('chat-sidebar')?.classList.add('mobile-hidden');
+    document.getElementById('chat-main-area')?.classList.remove('mobile-hidden');
+  }
+
+  // Confirmación de selección en la cabecera del chat
+  async function loadTripSelectionConfirmation(viajeId: string) {
+    if (!confirmationPanel) return;
+
+    try {
+      tripRequests = await solicitudesService.getSolicitudesPorViaje(viajeId);
+      const user = authService.getStoredUser();
+      const isDriver = currentTrip && currentTrip.conductorId === user?.id;
+
+      if (isDriver) {
+        // Conductor: ver solicitudes pendientes y botón Confirmar Selección
+        const pending = tripRequests.filter(r => r.estado === 'PENDIENTE');
+        if (pending.length > 0) {
+          confirmationPanel.style.display = 'block';
+          confirmationPanel.innerHTML = pending.map(req => `
+            <div class="chat-confirm-banner">
+              <div class="confirm-meta-text">
+                <span>⚡ Solicitud pendiente:</span>
+                <span class="confirm-passenger-badge">Pasajero (${req.pasajeroId.substring(0, 6)}...)</span>
+                <span><strong>${req.cantidadCupos} cupo(s)</strong></span>
+                ${req.mensaje ? `<span>- “${req.mensaje}”</span>` : ''}
+              </div>
+              <div class="chat-confirm-actions">
+                <button type="button" class="btn-chat-confirm-accept" data-req-id="${req.id}" title="Confirmar cupo y descontar lugar">
+                  ✓ Confirmar Selección
+                </button>
+                <button type="button" class="btn-chat-confirm-reject" data-req-id="${req.id}" title="Rechazar">
+                  ✕ Rechazar
+                </button>
+              </div>
+            </div>
+          `).join('');
+
+          // Bind clicks
+          confirmationPanel.querySelectorAll('.btn-chat-confirm-accept').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const reqId = (e.currentTarget as HTMLElement).getAttribute('data-req-id');
+              if (!reqId) return;
+              try {
+                (e.currentTarget as HTMLElement).textContent = 'Confirmando...';
+                await solicitudesService.responderSolicitud(reqId, true);
+                window.dispatchEvent(new CustomEvent('app-toast', {
+                  detail: { title: '¡Selección Confirmada!', desc: 'El pasajero ha sido aceptado y su cupo asegurado.', icon: '✅' }
+                }));
+                // Enviar mensaje automático al chat
+                if (currentConv) {
+                  await mensajeriaService.enviarMensaje(currentConv.id, '¡Tu selección de asiento ha sido confirmada por el conductor! Nos vemos en el viaje.');
+                }
+                await loadTripSelectionConfirmation(viajeId);
+                await loadMessages(currentConv!.id);
+              } catch (err: any) {
+                alert('Error al confirmar: ' + (err?.message || ''));
+              }
+            });
+          });
+
+          confirmationPanel.querySelectorAll('.btn-chat-confirm-reject').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const reqId = (e.currentTarget as HTMLElement).getAttribute('data-req-id');
+              if (!reqId) return;
+              if (!confirm('¿Rechazar esta solicitud de cupo?')) return;
+              await solicitudesService.responderSolicitud(reqId, false);
+              await loadTripSelectionConfirmation(viajeId);
+            });
+          });
+        } else {
+          confirmationPanel.style.display = 'none';
+        }
+      } else {
+        // Pasajero: ver estado de su reserva
+        const myReq = tripRequests.find(r => r.pasajeroId === user?.id);
+        if (myReq) {
+          confirmationPanel.style.display = 'block';
+          if (myReq.estado === 'ACEPTADA') {
+            confirmationPanel.innerHTML = `
+              <div class="chat-confirm-banner">
+                <span class="passenger-confirmed-pill">
+                  🟢 Tu selección fue confirmada por el conductor. ¡Tu asiento está asegurado!
+                </span>
+                <span style="font-size:0.8rem;color:#065F46;">Cupos: ${myReq.cantidadCupos}</span>
+              </div>
+            `;
+          } else if (myReq.estado === 'PENDIENTE') {
+            confirmationPanel.innerHTML = `
+              <div class="chat-confirm-banner">
+                <span style="font-size:0.86rem;color:#92400E;font-weight:600;">
+                  🟡 Solicitud pendiente: El conductor confirmará tu selección a la brevedad.
+                </span>
+              </div>
+            `;
+          } else {
+            confirmationPanel.style.display = 'none';
+          }
+        } else {
+          confirmationPanel.style.display = 'none';
+        }
+      }
+    } catch {
+      confirmationPanel.style.display = 'none';
+    }
+  }
+
+  // Cargar historial de mensajes
+  async function loadMessages(convId: string) {
+    if (!messagesScroll) return;
+
+    try {
+      const messages = await mensajeriaService.obtenerMensajes(convId);
+      const currentUser = authService.getStoredUser();
+
+      messagesScroll.innerHTML = messages.map(m => {
+        const isOutgoing = m.remitenteId === currentUser?.id;
+        const senderName = isOutgoing ? 'Tú' : (m.remitenteNombre || 'Participante');
+        const role = m.remitenteRol || 'PASAJERO';
+        const roleClass = role === 'CONDUCTOR' ? 'sender-driver' : (role === 'ADMIN' ? 'sender-admin' : 'sender-passenger');
+        const timeFormatted = m.enviadoEn ? new Date(m.enviadoEn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+        return `
+          <div class="chat-bubble-row ${isOutgoing ? 'outgoing' : 'incoming'}">
+            <div class="bubble-sender-meta">
+              <span class="sender-name" style="font-weight:700;">${senderName}</span>
+              <span class="sender-badge ${roleClass}">${role}</span>
+            </div>
+            <div class="bubble-body">
+              ${m.contenido}
+            </div>
+            <span class="bubble-time">${timeFormatted}</span>
+          </div>
+        `;
+      }).join('');
+
+      messagesScroll.scrollTop = messagesScroll.scrollHeight;
+    } catch (err) {
+      console.error('Error cargando mensajes:', err);
+    }
+  }
+
+  // Suscripción STOMP en tiempo real
+  function subscribeToConversation(conv: ConversacionResponse) {
+    if (activeUnsubscribe) activeUnsubscribe();
+
+    if (stompClient && stompClient.getIsConnected()) {
+      const topicViaje = `/topic/viaje.${conv.viajeId}`;
+      const topicConv = `/topic/conversacion.${conv.id}`;
+
+      const unviaje = stompClient.subscribe(topicViaje, handleNewIncomingMessage);
+      const unconv = stompClient.subscribe(topicConv, handleNewIncomingMessage);
+
+      activeUnsubscribe = () => {
+        unviaje();
+        unconv();
+      };
+    }
+  }
+
+  function handleNewIncomingMessage(msg: MensajeResponse) {
+    if (!messagesScroll || !currentConv) return;
+    if (msg.conversacionId !== currentConv.id) return;
+
+    const currentUser = authService.getStoredUser();
+    const isOutgoing = msg.remitenteId === currentUser?.id;
+    const senderName = isOutgoing ? 'Tú' : (msg.remitenteNombre || 'Participante');
+    const role = msg.remitenteRol || 'PASAJERO';
+    const roleClass = role === 'CONDUCTOR' ? 'sender-driver' : (role === 'ADMIN' ? 'sender-admin' : 'sender-passenger');
+    const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const newBubble = document.createElement('div');
+    newBubble.className = `chat-bubble-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
+    newBubble.innerHTML = `
+      <div class="bubble-sender-meta">
+        <span class="sender-name" style="font-weight:700;">${senderName}</span>
+        <span class="sender-badge ${roleClass}">${role}</span>
+      </div>
+      <div class="bubble-body">
+        ${msg.contenido}
+      </div>
+      <span class="bubble-time">${timeFormatted}</span>
+    `;
+
+    messagesScroll.appendChild(newBubble);
+    messagesScroll.scrollTop = messagesScroll.scrollHeight;
+  }
+
+  // Envío de mensaje
+  chatInputForm?.addEventListener('submit', async () => {
+    if (!messageInput || !currentConv) return;
+    const text = messageInput.value.trim();
+    if (!text) return;
+
+    messageInput.value = '';
+
+    try {
+      const currentUser = authService.getStoredUser();
+      const payload = {
+        conversacionId: currentConv.id,
+        remitenteId: currentUser?.id,
+        remitenteNombre: currentUser?.nombre,
+        remitenteRol: currentUser?.roles?.includes('CONDUCTOR') ? 'CONDUCTOR' : 'PASAJERO',
+        contenido: text,
+        enviadoEn: new Date().toISOString()
+      };
+
+      // Si STOMP está conectado, enviamos por WebSocket
+      if (stompClient && stompClient.getIsConnected()) {
+        stompClient.send('/app/chat.enviarMensaje', payload);
+      }
+
+      // Siempre respaldamos enviando al endpoint REST
+      await mensajeriaService.enviarMensaje(currentConv.id, text);
+
+      // Si STOMP no estaba activo o no se reflejó de inmediato, refrescar
+      setTimeout(() => {
+        if (currentConv) loadMessages(currentConv.id);
+      }, 350);
+    } catch (err: any) {
+      console.error('Error al enviar mensaje:', err);
+    }
+  });
+
+  // Refrescar mensajes
+  btnRefreshMessages?.addEventListener('click', () => {
+    if (currentConv) loadMessages(currentConv.id);
+  });
+
+  // Botón volver en mobile
+  btnBackSidebar?.addEventListener('click', () => {
+    document.getElementById('chat-sidebar')?.classList.remove('mobile-hidden');
+    document.getElementById('chat-main-area')?.classList.add('mobile-hidden');
+  });
+
+  // Búsqueda en sidebar
+  searchInput?.addEventListener('input', () => {
+    renderConversationsList();
+  });
+
+  // Chequear query param ?viajeId=xxx
+  async function checkUrlQueryParams() {
+    const params = new URLSearchParams(window.location.search);
+    const viajeId = params.get('viajeId');
+    if (!viajeId) return;
+
+    try {
+      const conv = await mensajeriaService.obtenerOCrearPorViaje(viajeId);
+      if (conv) {
+        if (!conversations.some(c => c.id === conv.id)) {
+          conversations.unshift(conv);
+        }
+        await selectConversation(conv);
+      }
+    } catch (err) {
+      console.warn('No se pudo abrir automáticamente el chat del viaje:', err);
+    }
+  }
+</script>

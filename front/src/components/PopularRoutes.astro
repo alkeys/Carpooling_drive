@@ -1,0 +1,324 @@
+---
+// PopularRoutes.astro - Catálogo visual de rutas costeras e interurbanas frecuentes
+interface RouteItem {
+  id: string;
+  title: string;
+  badge: string;
+  origin: string;
+  destination: string;
+  distance: string;
+  duration: string;
+  priceFrom: string;
+  description: string;
+  highlight: string;
+}
+
+const routes: RouteItem[] = [
+  {
+    id: "route-surf",
+    title: "Ruta Surf City & Costa del Bálsamo",
+    badge: "🌊 Más Popular",
+    origin: "San Salvador",
+    destination: "La Libertad / El Tunco",
+    distance: "34 km",
+    duration: "35 min",
+    priceFrom: "$2.50",
+    description: "Trayecto directo hacia el mar por carretera al Puerto de La Libertad. Ideal para surfistas, nómadas y fines de semana.",
+    highlight: "Alta frecuencia viernes a domingo"
+  },
+  {
+    id: "route-costa-sol",
+    title: "Ruta Brisa Costa del Sol & Esteros",
+    badge: "🏖️ Escénica",
+    origin: "San Salvador",
+    destination: "Costa del Sol",
+    distance: "58 km",
+    duration: "50 min",
+    priceFrom: "$3.50",
+    description: "Viaje cómodo por autopista a Comalapa hacia la playa más extensa del país. Aire acondicionado asegurado.",
+    highlight: "Conexión con aeropuerto internacional"
+  },
+  {
+    id: "route-metropolitana",
+    title: "Ruta Laboral Tecla ⇄ San Salvador",
+    badge: "⚡ Exprés Diario",
+    origin: "Santa Tecla",
+    destination: "San Salvador",
+    distance: "14 km",
+    duration: "20 min",
+    priceFrom: "$1.25",
+    description: "Evita el colapso vial de la Panamericana. Comparte con profesionales y estudiantes de universidades locales.",
+    highlight: "Salidas cada 15 minutos en horas pico"
+  },
+  {
+    id: "route-santa-ana",
+    title: "Ruta Heroica Santa Ana ⇄ Capital",
+    badge: "🌋 Interurbano",
+    origin: "Santa Ana",
+    destination: "San Salvador",
+    distance: "65 km",
+    duration: "55 min",
+    priceFrom: "$3.00",
+    description: "Conexión directa entre las dos mayores ciudades de El Salvador. Vehículos modernos y seguros.",
+    highlight: "Ahorro de hasta $150 mensuales"
+  }
+];
+---
+
+<section class="section routes-section" id="rutas">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Rutas Destacadas</span>
+      <h2>Los corredores costeros e interurbanos con mayor demanda</h2>
+      <p>
+        Trayectos optimizados donde siempre encontrarás conductores viajando en tu misma dirección.
+      </p>
+    </div>
+
+    <div class="routes-grid">
+      {routes.map((route) => (
+        <div class="route-card glass-card">
+          <div class="route-header">
+            <span class="route-badge">{route.badge}</span>
+            <div class="route-price-tag">
+              <span class="price-from">Desde</span>
+              <span class="price-val">{route.priceFrom}</span>
+            </div>
+          </div>
+
+          <h3 class="route-title">{route.title}</h3>
+
+          <div class="route-path-visual">
+            <div class="path-node origin-node">
+              <span class="dot"></span>
+              <span class="name">{route.origin}</span>
+            </div>
+            <div class="path-connector">
+              <span class="connector-line"></span>
+              <span class="connector-icon">➔</span>
+            </div>
+            <div class="path-node dest-node">
+              <span class="dot"></span>
+              <span class="name">{route.destination}</span>
+            </div>
+          </div>
+
+          <p class="route-desc">{route.description}</p>
+
+          <div class="route-metrics">
+            <div class="metric">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>{route.duration}</span>
+            </div>
+            <div class="metric">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+              </svg>
+              <span>{route.distance}</span>
+            </div>
+            <div class="metric highlight-metric">
+              <span>{route.highlight}</span>
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            class="btn btn-outline select-route-btn" 
+            data-origin={route.origin}
+            data-dest={route.destination}
+          >
+            <span>Ver Viajes en esta Ruta</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .routes-section {
+    background-color: var(--color-sand-light);
+  }
+
+  .routes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.8rem;
+  }
+
+  .route-card {
+    padding: 1.8rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1.2rem;
+    background: #FFFFFF;
+    border: 1px solid rgba(143, 214, 200, 0.35);
+  }
+
+  .route-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .route-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    background: var(--color-seafoam-soft);
+    color: var(--color-primary);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-seafoam);
+  }
+
+  .route-price-tag {
+    text-align: right;
+  }
+
+  .price-from {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--color-slate-light);
+  }
+
+  .price-val {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-ocean);
+  }
+
+  .route-title {
+    font-size: 1.15rem;
+    line-height: 1.3;
+    color: var(--color-slate);
+  }
+
+  /* Path Visual */
+  .route-path-visual {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--color-sand-light);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(11, 93, 103, 0.08);
+  }
+
+  .path-node {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .path-node .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .origin-node .dot {
+    background-color: var(--color-ocean);
+  }
+
+  .dest-node .dot {
+    background-color: var(--color-primary);
+  }
+
+  .path-connector {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--color-ocean);
+  }
+
+  .connector-line {
+    width: 20px;
+    height: 2px;
+    background-color: var(--color-seafoam);
+  }
+
+  .connector-icon {
+    font-size: 0.8rem;
+    color: var(--color-ocean);
+  }
+
+  .route-desc {
+    font-size: 0.88rem;
+    color: var(--color-slate-muted);
+    line-height: 1.5;
+  }
+
+  .route-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed rgba(11, 93, 103, 0.1);
+  }
+
+  .metric {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+    font-weight: 600;
+  }
+
+  .highlight-metric {
+    color: var(--color-primary);
+    font-size: 0.76rem;
+    background: rgba(143, 214, 200, 0.2);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .select-route-btn {
+    width: 100%;
+    font-size: 0.88rem;
+    padding: 0.65rem 1rem;
+    margin-top: 0.5rem;
+  }
+</style>
+
+<script>
+  // Route selection pre-fills the search widget and fires filtering
+  const routeButtons = document.querySelectorAll('.select-route-btn');
+  const originSelect = document.getElementById('search-origin') as HTMLSelectElement | null;
+  const destSelect = document.getElementById('search-destination') as HTMLSelectElement | null;
+
+  routeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const origin = btn.getAttribute('data-origin');
+      const dest = btn.getAttribute('data-dest');
+
+      if (originSelect && origin) originSelect.value = origin;
+      if (destSelect && dest) destSelect.value = dest;
+
+      // Dispatch search filter event
+      window.dispatchEvent(new CustomEvent('filter-rides', {
+        detail: { origin, destination: dest }
+      }));
+
+      // Scroll to rides section
+      const ridesSection = document.getElementById('viajes-disponibles');
+      if (ridesSection) {
+        ridesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>

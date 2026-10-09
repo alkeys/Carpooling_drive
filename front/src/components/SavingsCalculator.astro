@@ -1,0 +1,454 @@
+---
+// SavingsCalculator.astro - Calculadora de impacto económico y ambiental
+---
+
+<section class="section calculator-section" id="calculadora">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Impacto Real</span>
+      <h2>Calcula cuánto ahorras y cuánto CO₂ dejas de emitir</h2>
+      <p>
+        Compartir los asientos vacíos reduce la factura de combustible individual hasta en un 68% y alivia el tráfico en nuestras carreteras.
+      </p>
+    </div>
+
+    <div class="calculator-card glass-card">
+      <div class="calculator-grid">
+        <!-- Controls Column -->
+        <div class="calc-controls">
+          <div class="control-group">
+            <label for="trip-frequency-slider" class="control-label">
+              <span>Días de viaje por semana:</span>
+              <strong id="slider-freq-val" class="highlight-val">4 días</strong>
+            </label>
+            <input 
+              type="range" 
+              id="trip-frequency-slider" 
+              class="calc-slider" 
+              min="1" 
+              max="7" 
+              value="4" 
+              step="1"
+            />
+            <div class="slider-marks">
+              <span>1 día</span>
+              <span>3 días</span>
+              <span>5 días</span>
+              <span>7 días</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">
+              <span>Tipo de ruta habitual:</span>
+            </label>
+            <div class="route-type-selector">
+              <button type="button" class="type-btn active" data-km="35" data-cost="5.00">
+                <span class="type-title">🌊 Ruta Costera</span>
+                <span class="type-sub">~35 km (Surf City / Costa)</span>
+              </button>
+              <button type="button" class="type-btn" data-km="16" data-cost="3.00">
+                <span class="type-title">🏙️ Corredor Urbano</span>
+                <span class="type-sub">~16 km (Tecla ⇄ SS)</span>
+              </button>
+              <button type="button" class="type-btn" data-km="65" data-cost="7.50">
+                <span class="type-title">🛣️ Interurbano Largo</span>
+                <span class="type-sub">~65 km (Santa Ana ⇄ SS)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">
+              <span>Tu modalidad:</span>
+            </label>
+            <div class="role-selector">
+              <label class="role-radio-label">
+                <input type="radio" name="calc-role" value="passenger" checked />
+                <span class="role-box">Como Pasajero</span>
+              </label>
+              <label class="role-radio-label">
+                <input type="radio" name="calc-role" value="driver" />
+                <span class="role-box">Como Conductor</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Display Column -->
+        <div class="calc-results-display">
+          <div class="results-container">
+            <div class="result-badge">
+              <span>Estimación Mensual</span>
+            </div>
+
+            <div class="primary-result">
+              <span class="result-label">Ahorro mensual estimado</span>
+              <div class="big-number-row">
+                <span class="currency-symbol">$</span>
+                <span class="big-number" id="calc-savings-cash">118</span>
+                <span class="period">/ mes</span>
+              </div>
+              <p class="result-subtext" id="calc-result-subtext">
+                En comparación a viajar solo en vehículo particular con combustible, depreciación y parqueos.
+              </p>
+            </div>
+
+            <div class="secondary-metrics">
+              <div class="sec-metric">
+                <div class="sec-icon">🍃</div>
+                <div class="sec-data">
+                  <strong id="calc-co2-val">58 kg</strong>
+                  <span>CO₂ reducido / mes</span>
+                </div>
+              </div>
+
+              <div class="sec-metric">
+                <div class="sec-icon">⏳</div>
+                <div class="sec-data">
+                  <strong id="calc-stress-val">24 hrs</strong>
+                  <span>Manejo relajado / mes</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="calc-action">
+              <a href="#buscar" class="btn btn-primary" style="width: 100%;">
+                Empezar a Ahorrar Hoy
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .calculator-section {
+    position: relative;
+  }
+
+  .calculator-card {
+    padding: 2.5rem;
+    border-radius: var(--radius-xl);
+    background: #FFFFFF;
+    border: 1px solid rgba(143, 214, 200, 0.4);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .calculator-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  /* Controls */
+  .calc-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .control-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-slate);
+  }
+
+  .highlight-val {
+    color: var(--color-ocean);
+    font-size: 1.1rem;
+    font-family: var(--font-display);
+  }
+
+  .calc-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 99px;
+    background: var(--color-sand);
+    outline: none;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+  }
+
+  .slider-marks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--color-slate-light);
+  }
+
+  .route-type-selector {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1.5px solid rgba(11, 93, 103, 0.12);
+    background: var(--color-sand-light);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+  }
+
+  .type-btn:hover {
+    border-color: var(--color-ocean);
+  }
+
+  .type-btn.active {
+    border-color: var(--color-primary);
+    background: rgba(143, 214, 200, 0.2);
+    box-shadow: 0 2px 8px rgba(11, 93, 103, 0.1);
+  }
+
+  .type-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--color-slate);
+  }
+
+  .type-sub {
+    font-size: 0.78rem;
+    color: var(--color-slate-muted);
+  }
+
+  /* Role selector */
+  .role-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .role-radio-label {
+    cursor: pointer;
+  }
+
+  .role-radio-label input {
+    display: none;
+  }
+
+  .role-box {
+    display: block;
+    text-align: center;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1.5px solid rgba(11, 93, 103, 0.12);
+    background: var(--color-sand-light);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-slate);
+    transition: all var(--transition-fast);
+  }
+
+  .role-radio-label input:checked + .role-box {
+    background-color: var(--color-primary);
+    color: #FFFFFF;
+    border-color: var(--color-primary);
+  }
+
+  /* Results Display */
+  .calc-results-display {
+    background: linear-gradient(145deg, rgba(11, 93, 103, 0.05) 0%, rgba(143, 214, 200, 0.15) 100%);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-seafoam-border);
+    padding: 2.2rem;
+  }
+
+  .results-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .result-badge {
+    display: inline-block;
+  }
+
+  .result-badge span {
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-ocean);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-seafoam);
+  }
+
+  .primary-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .result-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-slate-muted);
+  }
+
+  .big-number-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+
+  .currency-symbol {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-primary);
+  }
+
+  .big-number {
+    font-family: var(--font-display);
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .period {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-slate-muted);
+  }
+
+  .result-subtext {
+    font-size: 0.82rem;
+    color: var(--color-slate-muted);
+    line-height: 1.4;
+  }
+
+  .secondary-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    padding-top: 1.25rem;
+    border-top: 1px dashed rgba(11, 93, 103, 0.15);
+  }
+
+  .sec-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .sec-icon {
+    font-size: 1.5rem;
+  }
+
+  .sec-data {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sec-data strong {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-slate);
+    line-height: 1.1;
+  }
+
+  .sec-data span {
+    font-size: 0.75rem;
+    color: var(--color-slate-muted);
+  }
+
+  @media (max-width: 900px) {
+    .calculator-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .calculator-card {
+      padding: 1.5rem;
+    }
+  }
+</style>
+
+<script>
+  // Calculator reactive logic
+  const slider = document.getElementById('trip-frequency-slider') as HTMLInputElement | null;
+  const sliderFreqVal = document.getElementById('slider-freq-val');
+  const typeButtons = document.querySelectorAll('.type-btn');
+  const roleRadios = document.querySelectorAll('input[name="calc-role"]');
+  const savingsCash = document.getElementById('calc-savings-cash');
+  const co2Val = document.getElementById('calc-co2-val');
+  const stressVal = document.getElementById('calc-stress-val');
+  const resultSubtext = document.getElementById('calc-result-subtext');
+
+  let daysPerWeek = 4;
+  let singleTripKm = 35;
+  let isDriver = false;
+
+  slider?.addEventListener('input', (e) => {
+    daysPerWeek = parseInt((e.target as HTMLInputElement).value, 10);
+    if (sliderFreqVal) sliderFreqVal.textContent = `${daysPerWeek} día${daysPerWeek > 1 ? 's' : ''}`;
+    updateCalculations();
+  });
+
+  typeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      typeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      singleTripKm = parseFloat(btn.getAttribute('data-km') || '35');
+      updateCalculations();
+    });
+  });
+
+  roleRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      isDriver = (e.target as HTMLInputElement).value === 'driver';
+      if (resultSubtext) {
+        resultSubtext.textContent = isDriver 
+          ? 'Recuperas hasta el 75% del combustible al monetizar asientos vacíos de tu auto.'
+          : 'En comparación a viajar solo en vehículo particular con combustible, depreciación y parqueos.';
+      }
+      updateCalculations();
+    });
+  });
+
+  function updateCalculations() {
+    const tripsPerMonth = daysPerWeek * 4 * 2; // ida y vuelta
+    const totalKmMonth = tripsPerMonth * singleTripKm;
+
+    let monthlySavings = 0;
+    let co2Kg = Math.round(totalKmMonth * 0.145);
+    let hoursSaved = Math.round((totalKmMonth / 40) * 0.5);
+
+    if (isDriver) {
+      // Driver recovers shared costs from 2 to 3 passengers
+      monthlySavings = Math.round((totalKmMonth * 0.12) * 2.5);
+    } else {
+      // Passenger avoids gas ($4.20/gal @ 30mpg ~ $0.14/km) + parking + maintenance
+      const privateCost = totalKmMonth * 0.22;
+      const carpoolCost = tripsPerMonth * (singleTripKm > 40 ? 3.25 : singleTripKm > 20 ? 2.50 : 1.35);
+      monthlySavings = Math.max(25, Math.round(privateCost - carpoolCost));
+    }
+
+    if (savingsCash) savingsCash.textContent = String(monthlySavings);
+    if (co2Val) co2Val.textContent = `${co2Kg} kg`;
+    if (stressVal) stressVal.textContent = `${hoursSaved} hrs`;
+  }
+</script>

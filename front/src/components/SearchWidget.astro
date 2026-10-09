@@ -1,0 +1,374 @@
+---
+// SearchWidget.astro - Buscador interactivo minimalista de viajes
+---
+
+<div class="search-widget-card glass-card" id="buscar">
+  <form class="search-form" id="ride-search-form" onsubmit="return false;">
+    <!-- Origen -->
+    <div class="search-field">
+      <label for="search-origin" class="field-label">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="field-icon origin-icon">
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span>Punto de Partida</span>
+      </label>
+      <div class="input-wrapper">
+        <select id="search-origin" class="field-select">
+          <option value="">¿Desde dónde sales?</option>
+          <option value="San Salvador" selected>San Salvador (Multiplaza / UCA)</option>
+          <option value="Santa Tecla">Santa Tecla (Parque San Martín)</option>
+          <option value="Santa Ana">Santa Ana (Metrocentro)</option>
+          <option value="San Miguel">San Miguel (Roosevelt)</option>
+          <option value="Sonsonate">Sonsonate (Terminal)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Swap Button (Minimalist decorative / interactive) -->
+    <button type="button" class="swap-locations-btn" id="swap-btn" title="Intercambiar origen y destino" aria-label="Intercambiar origen y destino">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16l-4-4m0 0l4-4m-4 4h18"></path>
+        <path d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+      </svg>
+    </button>
+
+    <!-- Destino -->
+    <div class="search-field">
+      <label for="search-destination" class="field-label">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="field-icon dest-icon">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        <span>Destino</span>
+      </label>
+      <div class="input-wrapper">
+        <select id="search-destination" class="field-select">
+          <option value="">¿Hacia dónde vas?</option>
+          <option value="La Libertad / El Tunco" selected>La Libertad / El Tunco (Surf City)</option>
+          <option value="Costa del Sol">Costa del Sol / Blvd. Costa del Sol</option>
+          <option value="Santa Ana">Santa Ana (Centro / UNICAES)</option>
+          <option value="San Salvador">San Salvador (Zona Rosa / Salvador del Mundo)</option>
+          <option value="El Zonte">El Zonte / Playa Bitcoin</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Fecha -->
+    <div class="search-field field-date">
+      <label for="search-date" class="field-label">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="field-icon">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <span>Fecha</span>
+      </label>
+      <div class="input-wrapper">
+        <input type="date" id="search-date" class="field-input" value="2026-10-10" />
+      </div>
+    </div>
+
+    <!-- Pasajeros -->
+    <div class="search-field field-seats">
+      <label for="search-seats" class="field-label">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="field-icon">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>Cupos</span>
+      </label>
+      <div class="input-wrapper">
+        <select id="search-seats" class="field-select">
+          <option value="1">1 asiento</option>
+          <option value="2">2 asientos</option>
+          <option value="3">3 asientos</option>
+          <option value="4">4 asientos</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CTA Buscar -->
+    <div class="search-action">
+      <button type="submit" class="btn btn-primary search-submit-btn" id="btn-submit-search">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Buscar Rutas</span>
+      </button>
+    </div>
+  </form>
+
+  <!-- Coastal Quick Route Pills -->
+  <div class="quick-routes-bar">
+    <span class="quick-routes-label">Rutas de alta demanda hoy:</span>
+    <div class="quick-pills">
+      <button type="button" class="quick-pill active" data-origin="San Salvador" data-dest="La Libertad / El Tunco">
+        <span class="pill-badge">🌊 Costa</span> SS ⇄ El Tunco
+      </button>
+      <button type="button" class="quick-pill" data-origin="Santa Tecla" data-dest="San Salvador">
+        <span class="pill-badge">⚡ Urbano</span> Tecla ⇄ San Salvador
+      </button>
+      <button type="button" class="quick-pill" data-origin="San Salvador" data-dest="Costa del Sol">
+        <span class="pill-badge">🏖️ Brisa</span> SS ⇄ Costa del Sol
+      </button>
+      <button type="button" class="quick-pill" data-origin="Santa Ana" data-dest="San Salvador">
+        <span class="pill-badge">🌋 Express</span> Santa Ana ⇄ SS
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .search-widget-card {
+    padding: 1.5rem 1.75rem;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(143, 214, 200, 0.4);
+    box-shadow: 0 16px 40px -8px rgba(11, 93, 103, 0.16);
+    background: rgba(255, 255, 255, 0.94);
+    position: relative;
+    z-index: 10;
+  }
+
+  .search-form {
+    display: grid;
+    grid-template-columns: 1.3fr auto 1.3fr 1fr 0.8fr auto;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .search-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .field-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-slate-muted);
+  }
+
+  .field-icon {
+    color: var(--color-ocean);
+  }
+  .origin-icon {
+    color: var(--color-ocean);
+  }
+  .dest-icon {
+    color: var(--color-primary);
+  }
+
+  .input-wrapper {
+    position: relative;
+  }
+
+  .field-select,
+  .field-input {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-slate);
+    background-color: var(--color-sand-light);
+    border: 1.5px solid rgba(11, 93, 103, 0.14);
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    text-overflow: ellipsis;
+  }
+
+  .field-select:focus,
+  .field-input:focus {
+    border-color: var(--color-ocean);
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(143, 214, 200, 0.35);
+  }
+
+  /* Swap button */
+  .swap-locations-btn {
+    align-self: flex-end;
+    margin-bottom: 4px;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-seafoam-border);
+    background-color: #FFFFFF;
+    color: var(--color-ocean);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+  }
+
+  .swap-locations-btn:hover {
+    background-color: var(--color-seafoam-soft);
+    color: var(--color-primary);
+    transform: rotate(180deg);
+  }
+
+  /* Submit Action */
+  .search-action {
+    align-self: flex-end;
+    margin-bottom: 2px;
+  }
+
+  .search-submit-btn {
+    height: 48px;
+    padding: 0 1.6rem;
+    font-size: 1rem;
+    width: 100%;
+  }
+
+  /* Quick Route Pills */
+  .quick-routes-bar {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(11, 93, 103, 0.15);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .quick-routes-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-slate-muted);
+  }
+
+  .quick-pills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .quick-pill {
+    background-color: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.12);
+    padding: 0.35rem 0.8rem;
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-slate);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all var(--transition-fast);
+  }
+
+  .quick-pill:hover,
+  .quick-pill.active {
+    background-color: var(--color-seafoam-soft);
+    border-color: var(--color-seafoam);
+    color: var(--color-primary);
+  }
+
+  .pill-badge {
+    font-size: 0.75rem;
+  }
+
+  /* Responsiveness */
+  @media (max-width: 1080px) {
+    .search-form {
+      grid-template-columns: 1fr 1fr;
+    }
+    .swap-locations-btn {
+      display: none;
+    }
+    .search-action {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .search-widget-card {
+      padding: 1.25rem 1rem;
+    }
+    .search-form {
+      grid-template-columns: 1fr;
+    }
+    .search-action {
+      grid-column: span 1;
+    }
+    .quick-routes-bar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<script>
+  // Dynamic handling of quick pills & swap
+  const originSelect = document.getElementById('search-origin') as HTMLSelectElement | null;
+  const destSelect = document.getElementById('search-destination') as HTMLSelectElement | null;
+  const swapBtn = document.getElementById('swap-btn');
+  const quickPills = document.querySelectorAll('.quick-pill');
+  const searchForm = document.getElementById('ride-search-form');
+
+  // Swap logic
+  swapBtn?.addEventListener('click', () => {
+    if (originSelect && destSelect) {
+      const tempVal = originSelect.value;
+      originSelect.value = destSelect.value;
+      destSelect.value = tempVal;
+    }
+  });
+
+  // Quick route pill click
+  quickPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      quickPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+
+      const origin = pill.getAttribute('data-origin');
+      const dest = pill.getAttribute('data-dest');
+
+      if (originSelect && origin) originSelect.value = origin;
+      if (destSelect && dest) destSelect.value = dest;
+
+      // Trigger search filter
+      triggerSearchFilter();
+    });
+  });
+
+  // Form submit
+  searchForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    triggerSearchFilter();
+  });
+
+  function triggerSearchFilter() {
+    const origin = originSelect?.value || '';
+    const destination = destSelect?.value || '';
+    const dateInput = document.getElementById('search-date') as HTMLInputElement | null;
+    const seatsSelect = document.getElementById('search-seats') as HTMLSelectElement | null;
+    const date = dateInput?.value || '';
+    const seats = parseInt(seatsSelect?.value || '1', 10);
+
+    // Dispatch custom event for RidesSection to react
+    window.dispatchEvent(new CustomEvent('filter-rides', {
+      detail: { origin, destination, date, seats }
+    }));
+
+    // Scroll smoothly to rides section
+    const ridesSection = document.getElementById('viajes-disponibles');
+    if (ridesSection) {
+      ridesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+</script>

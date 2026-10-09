@@ -1,0 +1,47 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Rutea | Carpooling Fresco, Seguro y Costero en El Salvador",
+  description = "Conecta con conductores y pasajeros verificados en El Salvador. Viaja fresco y seguro compartiendo rutas interurbanas y costeras. Ahorra costos y cuida el medio ambiente."
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <!-- SEO Primario -->
+    <title>{title}</title>
+    <meta name="title" content={title} />
+    <meta name="description" content={description} />
+    <meta name="keywords" content="carpooling El Salvador, viajes compartidos, ruta El Tunco, Surf City, San Salvador, Santa Ana, transporte seguro, movilidad sostenible" />
+    <meta name="theme-color" content="#0B5D67" />
+
+    <!-- Open Graph / Redes Sociales -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:locale" content="es_SV" />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+
+    <!-- Preconnect para Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body>
+    <div class="coastal-ambient-glow" aria-hidden="true"></div>
+    <slot />
+  </body>
+</html>

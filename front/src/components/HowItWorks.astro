@@ -1,0 +1,173 @@
+---
+// HowItWorks.astro - Paso a paso minimalista
+---
+
+<section class="section how-it-works-section" id="como-funciona">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Fácil y Rápido</span>
+      <h2>¿Cómo funciona Rutea en 3 simples pasos?</h2>
+      <p>
+        Sin complicaciones. Diseñado para que en menos de 2 minutos tengas tu viaje coordinado.
+      </p>
+    </div>
+
+    <div class="steps-grid">
+      <!-- Step 1 -->
+      <div class="step-card">
+        <div class="step-number-badge">1</div>
+        <div class="step-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <h3>Busca o Publica</h3>
+        <p>
+          Ingresa origen, destino costero o urbano y horario. Si vas en tu auto, publica los asientos que no utilizas.
+        </p>
+      </div>
+
+      <!-- Connector line -->
+      <div class="step-divider" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card">
+        <div class="step-number-badge">2</div>
+        <div class="step-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+          </svg>
+        </div>
+        <h3>Reserva con Confianza</h3>
+        <p>
+          Revisa el perfil, valoraciones y vehículo verificado del conductor. Confirma tu cupo instantáneamente.
+        </p>
+      </div>
+
+      <!-- Connector line -->
+      <div class="step-divider" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card">
+        <div class="step-number-badge">3</div>
+        <div class="step-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <h3>Viaja Fresco y Comparte</h3>
+        <p>
+          Encuéntrate en el punto acordado, viaja con comodidad, paga de forma transparente y califica tu experiencia.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .how-it-works-section {
+    background-color: #FFFFFF;
+    position: relative;
+  }
+
+  .steps-grid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .step-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2.2rem 1.8rem;
+    border-radius: var(--radius-lg);
+    background: var(--color-sand-light);
+    border: 1px solid rgba(11, 93, 103, 0.1);
+    position: relative;
+    transition: transform var(--transition-normal);
+  }
+
+  .step-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-seafoam);
+  }
+
+  .step-number-badge {
+    position: absolute;
+    top: 1rem;
+    left: 1.25rem;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--color-ocean);
+    background: #FFFFFF;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-seafoam);
+  }
+
+  .step-icon-wrapper {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(143, 214, 200, 0.3) 0%, rgba(15, 138, 139, 0.15) 100%);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--color-seafoam-border);
+  }
+
+  .step-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-slate);
+  }
+
+  .step-card p {
+    font-size: 0.92rem;
+    color: var(--color-slate-muted);
+    line-height: 1.5;
+  }
+
+  .step-divider {
+    color: var(--color-seafoam);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 900px) {
+    .steps-grid {
+      flex-direction: column;
+    }
+    .step-divider {
+      transform: rotate(90deg);
+      margin: 0.5rem 0;
+    }
+    .step-card {
+      width: 100%;
+    }
+  }
+</style>

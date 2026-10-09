@@ -18,6 +18,12 @@ public record MensajeResponse(
     @Schema(description = "ID del usuario remitente (UUID)", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
     UUID remitenteId,
 
+    @Schema(description = "Nombre completo del usuario remitente", example = "Rodrigo Morales")
+    String remitenteNombre,
+
+    @Schema(description = "Rol del remitente", example = "CONDUCTOR")
+    String remitenteRol,
+
     @Schema(description = "Texto del mensaje", example = "Estoy esperando en la gasolinera.")
     String contenido,
 
@@ -28,10 +34,16 @@ public record MensajeResponse(
     OffsetDateTime leidoEn
 ) {
     public static MensajeResponse fromDomain(Mensaje domain) {
+        return fromDomain(domain, "Usuario", "USUARIO");
+    }
+
+    public static MensajeResponse fromDomain(Mensaje domain, String remitenteNombre, String remitenteRol) {
         return new MensajeResponse(
             domain.id(),
             domain.conversacionId(),
             domain.remitenteId(),
+            remitenteNombre != null ? remitenteNombre : "Usuario",
+            remitenteRol != null ? remitenteRol : "USUARIO",
             domain.contenido(),
             domain.enviadoEn(),
             domain.leidoEn()

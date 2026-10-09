@@ -12,4 +12,8 @@ import com.carpooling.sv.v1.mensajeria.infra.adapter.out.persistence.entity.JpaM
 public interface SpringDataMensajeRepository extends JpaRepository<JpaMensaje, UUID> {
 
     List<JpaMensaje> findByConversacionIdOrderByEnviadoEnAsc(UUID conversacionId);
+
+    java.util.Optional<JpaMensaje> findFirstByConversacionIdOrderByEnviadoEnDesc(UUID conversacionId);
+
+    long countByConversacionId(UUID conversacionId);
 }

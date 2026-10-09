@@ -1,0 +1,792 @@
+---
+// viajes-seleccionados.astro - Viajes Seleccionados y Reservas de Pasajeros
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import AuthModal from '../components/AuthModal.astro';
+---
+
+<Layout 
+  title="Viajes Seleccionados & Reservas | Rutea El Salvador"
+  description="Revisa tus viajes seleccionados, el estado de tus reservas de cupos y chatea con los conductores en tiempo real."
+>
+  <Navbar />
+
+  <main class="bookings-page">
+    <div class="container">
+      
+      <!-- Encabezado de Página -->
+      <header class="page-header">
+        <div class="header-intro">
+          <div class="header-badge-row">
+            <span class="badge badge-sand">🎟️ Módulo de Pasajero</span>
+            <span class="status-live-chip">En Vivo</span>
+          </div>
+          <h1 class="page-title">Viajes Seleccionados & Reservas</h1>
+          <p class="page-subtitle">
+            Monitorea los viajes que has seleccionado para viajar, verifica la confirmación del conductor y coordina tu salida por mensaje.
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <a href="/#buscar" class="btn btn-primary btn-sm">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Buscar Nuevos Viajes</span>
+          </a>
+          <a href="/mis-viajes" class="btn btn-outline btn-sm">
+            <span>🚗 Mis Viajes (Conductor)</span>
+          </a>
+          <a href="/mensajes" class="btn btn-ghost btn-sm">
+            <span>💬 Centro de Mensajes</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Auth Required Gate Banner -->
+      <section class="auth-gate-card glass-card" id="bookings-auth-gate" style="display: none;">
+        <div class="gate-icon">🔒</div>
+        <div class="gate-content">
+          <h3>Inicia sesión para ver tus reservas</h3>
+          <p>Para ver los viajes que has seleccionado y comunicarte con el conductor, inicia sesión con tu cuenta.</p>
+          <button type="button" class="btn btn-primary" id="btn-gate-open-login">
+            Iniciar Sesión
+          </button>
+        </div>
+      </section>
+
+      <!-- Dashboard de Reservas (Autenticado) -->
+      <section class="bookings-dashboard-section" id="bookings-content">
+        <!-- Métricas Rápidas KPI -->
+        <div class="kpi-grid">
+          <div class="kpi-item glass-card">
+            <span class="kpi-icon">🎟️</span>
+            <div class="kpi-meta">
+              <span class="kpi-label">Total Reservas</span>
+              <strong class="kpi-num" id="kpi-total-bookings">--</strong>
+            </div>
+          </div>
+          <div class="kpi-item glass-card">
+            <span class="kpi-icon">✅</span>
+            <div class="kpi-meta">
+              <span class="kpi-label">Confirmadas por Conductor</span>
+              <strong class="kpi-num color-emerald" id="kpi-confirmed-bookings">--</strong>
+            </div>
+          </div>
+          <div class="kpi-item glass-card">
+            <span class="kpi-icon">⏳</span>
+            <div class="kpi-meta">
+              <span class="kpi-label">En Espera de Confirmación</span>
+              <strong class="kpi-num color-amber" id="kpi-pending-bookings">--</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros de Pestaña -->
+        <div class="bookings-filter-tabs">
+          <button type="button" class="tab-pill active" data-filter="all">Todas las Reservas</button>
+          <button type="button" class="tab-pill" data-filter="confirmed">Confirmadas (Aceptadas)</button>
+          <button type="button" class="tab-pill" data-filter="pending">Pendientes de Confirmación</button>
+          <button type="button" class="tab-pill" data-filter="cancelled">Canceladas / Rechazadas</button>
+        </div>
+
+        <!-- Indicador de Carga -->
+        <div class="loading-state" id="bookings-loading-indicator">
+          <div class="spinner-circle"></div>
+          <p>Cargando tus viajes seleccionados desde la API...</p>
+        </div>
+
+        <!-- Estado Vacío -->
+        <div class="empty-bookings-card glass-card" id="bookings-empty-card" style="display: none;">
+          <div class="empty-icon">🏄</div>
+          <h3>No has seleccionado ningún viaje aún</h3>
+          <p>Encuentra traslados diarios y rutas hacia la costa, San Salvador o Santa Ana con conductores verificados.</p>
+          <a href="/#buscar" class="btn btn-primary">Explorar Rutas Disponibles</a>
+        </div>
+
+        <!-- Lista de Tarjetas de Viajes Seleccionados -->
+        <div class="bookings-list-grid" id="bookings-list-container">
+          <!-- Renderizado dinámico -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <AuthModal />
+</Layout>
+
+<style>
+  .bookings-page {
+    padding: 2.5rem 0 5rem;
+    min-height: 85vh;
+    background: radial-gradient(circle at 15% 15%, rgba(143, 214, 200, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(11, 93, 103, 0.08) 0%, transparent 45%);
+  }
+
+  /* Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2.2rem;
+  }
+
+  .header-intro {
+    max-width: 680px;
+  }
+
+  .header-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .status-live-chip {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0F8A8B;
+    background: rgba(15, 138, 139, 0.12);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full);
+  }
+
+  .page-title {
+    font-size: 2.2rem;
+    font-family: var(--font-display);
+    color: var(--color-slate);
+    margin: 0 0 0.5rem;
+    line-height: 1.15;
+  }
+
+  .page-subtitle {
+    font-size: 1rem;
+    color: var(--color-slate-muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* Gate Card */
+  .auth-gate-card {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-radius: var(--radius-xl);
+    max-width: 580px;
+    margin: 3rem auto;
+  }
+
+  .gate-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .auth-gate-card h3 {
+    font-size: 1.4rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-gate-card p {
+    color: var(--color-slate-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-item {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: var(--radius-md);
+  }
+
+  .kpi-icon {
+    font-size: 2rem;
+  }
+
+  .kpi-meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kpi-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .kpi-num {
+    font-size: 1.7rem;
+    font-family: var(--font-display);
+    color: var(--color-primary);
+    line-height: 1.1;
+  }
+
+  .color-emerald {
+    color: #059669 !important;
+  }
+
+  .color-amber {
+    color: #D97706 !important;
+  }
+
+  /* Filter Tabs */
+  .bookings-filter-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.8rem;
+    border-bottom: 1px solid rgba(143, 214, 200, 0.3);
+    padding-bottom: 1rem;
+  }
+
+  .tab-pill {
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--radius-full);
+    background: transparent;
+    border: 1px solid rgba(143, 214, 200, 0.4);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-slate-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .tab-pill:hover {
+    color: var(--color-primary);
+    border-color: var(--color-ocean);
+  }
+
+  .tab-pill.active {
+    background: var(--color-primary);
+    color: #FFFFFF;
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 6px rgba(11, 93, 103, 0.2);
+  }
+
+  /* Loading & Empty States */
+  .loading-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--color-slate-muted);
+  }
+
+  .spinner-circle {
+    width: 38px;
+    height: 38px;
+    margin: 0 auto 1rem;
+    border: 3px solid rgba(15, 138, 139, 0.2);
+    border-top-color: var(--color-ocean);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .empty-bookings-card {
+    text-align: center;
+    padding: 3.5rem 2rem;
+    border-radius: var(--radius-xl);
+    max-width: 540px;
+    margin: 2rem auto;
+  }
+
+  .empty-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-bookings-card h3 {
+    font-size: 1.5rem;
+    color: var(--color-slate);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-bookings-card p {
+    color: var(--color-slate-muted);
+    margin-bottom: 1.8rem;
+    line-height: 1.5;
+  }
+
+  /* Bookings Grid */
+  .bookings-list-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Individual Booking Card */
+  :global(.booking-card) {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(143, 214, 200, 0.35);
+    padding: 1.6rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  }
+
+  :global(.booking-card:hover) {
+    box-shadow: var(--shadow-md);
+  }
+
+  :global(.booking-top-bar) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid rgba(143, 214, 200, 0.25);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  :global(.booking-route-title) {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-slate);
+    font-family: var(--font-display);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  :global(.booking-status-badge) {
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  :global(.b-status-aceptada) {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  :global(.b-status-pendiente) {
+    background: rgba(245, 158, 11, 0.12);
+    color: #D97706;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  :global(.b-status-rechazada) {
+    background: rgba(239, 68, 68, 0.12);
+    color: #DC2626;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  :global(.b-status-cancelada) {
+    background: rgba(100, 116, 139, 0.12);
+    color: #64748B;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+  }
+
+  :global(.booking-grid-info) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    background: rgba(248, 250, 252, 0.8);
+    padding: 1rem 1.2rem;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  :global(.booking-info-cell) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  :global(.b-label) {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-slate-muted);
+  }
+
+  :global(.b-val) {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-slate);
+  }
+
+  :global(.booking-status-notice) {
+    padding: 0.85rem 1.1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.2rem;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  :global(.notice-confirmed) {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #065F46;
+  }
+
+  :global(.notice-pending) {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    color: #92400E;
+  }
+
+  :global(.notice-inactive) {
+    background: rgba(100, 116, 139, 0.08);
+    border: 1px solid rgba(100, 116, 139, 0.2);
+    color: #475569;
+  }
+
+  :global(.booking-card-actions) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(143, 214, 200, 0.2);
+  }
+
+  :global(.btn-chat-with-driver) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #0B5D67;
+    color: #FFFFFF;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.88rem;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  :global(.btn-chat-with-driver:hover) {
+    background: #0F8A8B;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(11, 93, 103, 0.2);
+  }
+
+  :global(.btn-cancel-my-booking) {
+    background: transparent;
+    color: #DC2626;
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  :global(.btn-cancel-my-booking:hover) {
+    background: rgba(220, 38, 38, 0.08);
+  }
+</style>
+
+<script>
+  import { authService, solicitudesService, viajesService, type SolicitudResponse, type ViajeResponse } from '../services';
+
+  const authGate = document.getElementById('bookings-auth-gate');
+  const dashboardContent = document.getElementById('bookings-content');
+  const btnGateLogin = document.getElementById('btn-gate-open-login');
+
+  const kpiTotalBookings = document.getElementById('kpi-total-bookings');
+  const kpiConfirmedBookings = document.getElementById('kpi-confirmed-bookings');
+  const kpiPendingBookings = document.getElementById('kpi-pending-bookings');
+
+  const loadingIndicator = document.getElementById('bookings-loading-indicator');
+  const emptyCard = document.getElementById('bookings-empty-card');
+  const bookingsContainer = document.getElementById('bookings-list-container');
+  const tabPills = document.querySelectorAll('.tab-pill');
+
+  let myBookings: SolicitudResponse[] = [];
+  let tripsDetailMap: Map<string, ViajeResponse> = new Map();
+  let currentFilter = 'all';
+
+  function checkAuth() {
+    if (!authService.isAuthenticated()) {
+      if (authGate) authGate.style.display = 'block';
+      if (dashboardContent) dashboardContent.style.display = 'none';
+      return false;
+    }
+    if (authGate) authGate.style.display = 'none';
+    if (dashboardContent) dashboardContent.style.display = 'block';
+    return true;
+  }
+
+  btnGateLogin?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('request-auth-required', {
+      detail: { action: 'ver tus viajes seleccionados' }
+    }));
+  });
+
+  window.addEventListener('auth-state-changed', (e: any) => {
+    if (checkAuth()) {
+      loadUserBookings();
+    }
+  });
+
+  if (checkAuth()) {
+    loadUserBookings();
+  }
+
+  // Cargar solicitudes enviadas por el usuario
+  async function loadUserBookings() {
+    try {
+      if (loadingIndicator) loadingIndicator.style.display = 'block';
+      if (emptyCard) emptyCard.style.display = 'none';
+      if (bookingsContainer) bookingsContainer.innerHTML = '';
+
+      myBookings = await solicitudesService.getMisSolicitudes();
+
+      // Cargar detalles de los viajes asociados
+      const tripPromises = myBookings.map(async (booking) => {
+        if (!tripsDetailMap.has(booking.viajeId)) {
+          try {
+            const trip = await viajesService.getViajeById(booking.viajeId);
+            tripsDetailMap.set(booking.viajeId, trip);
+          } catch {
+            // Manejo de viaje no disponible
+          }
+        }
+      });
+      await Promise.all(tripPromises);
+
+      updateKpis();
+      renderFilteredBookings();
+    } catch (err: any) {
+      console.error('Error cargando reservas de usuario:', err);
+      if (bookingsContainer) {
+        bookingsContainer.innerHTML = `
+          <div class="empty-bookings-card glass-card">
+            <div class="empty-icon">⚠️</div>
+            <h3>Error al recuperar reservas</h3>
+            <p>${err?.message || 'Hubo un error de conexión con la API.'}</p>
+            <button type="button" class="btn btn-outline" id="btn-retry-bookings">Reintentar</button>
+          </div>
+        `;
+        document.getElementById('btn-retry-bookings')?.addEventListener('click', loadUserBookings);
+      }
+    } finally {
+      if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+  }
+
+  // Actualizar métricas KPI
+  function updateKpis() {
+    if (kpiTotalBookings) kpiTotalBookings.textContent = String(myBookings.length);
+    const confirmed = myBookings.filter(b => b.estado === 'ACEPTADA').length;
+    if (kpiConfirmedBookings) kpiConfirmedBookings.textContent = String(confirmed);
+    const pending = myBookings.filter(b => b.estado === 'PENDIENTE').length;
+    if (kpiPendingBookings) kpiPendingBookings.textContent = String(pending);
+  }
+
+  // Filtrado y renderizado
+  function renderFilteredBookings() {
+    if (!bookingsContainer) return;
+
+    let filtered = myBookings.slice();
+
+    if (currentFilter === 'confirmed') {
+      filtered = filtered.filter(b => b.estado === 'ACEPTADA');
+    } else if (currentFilter === 'pending') {
+      filtered = filtered.filter(b => b.estado === 'PENDIENTE');
+    } else if (currentFilter === 'cancelled') {
+      filtered = filtered.filter(b => b.estado === 'CANCELADA' || b.estado === 'RECHAZADA');
+    }
+
+    if (filtered.length === 0) {
+      if (emptyCard) emptyCard.style.display = 'block';
+      bookingsContainer.innerHTML = '';
+      return;
+    }
+
+    if (emptyCard) emptyCard.style.display = 'none';
+
+    bookingsContainer.innerHTML = filtered.map(booking => renderBookingCard(booking)).join('');
+
+    attachBookingListeners();
+  }
+
+  // Renderizado de cada tarjeta de reserva
+  function renderBookingCard(booking: SolicitudResponse): string {
+    const trip = tripsDetailMap.get(booking.viajeId);
+    const origin = trip?.origenNombre || 'Origen en El Salvador';
+    const destination = trip?.destinoNombre || 'Destino';
+    const date = trip?.fechaSalida || 'Fecha programada';
+    const time = trip?.horaSalida || 'Hora';
+    const tarifa = Number(trip?.tarifaAproximada) || 2.50;
+    const totalTarifa = (tarifa * booking.cantidadCupos).toFixed(2);
+
+    const isAccepted = booking.estado === 'ACEPTADA';
+    const isPending = booking.estado === 'PENDIENTE';
+    const isRejected = booking.estado === 'RECHAZADA';
+    const isCancelled = booking.estado === 'CANCELADA';
+
+    let badgeClass = 'b-status-pendiente';
+    let badgeText = '⏳ En Espera de Confirmación';
+    let noticeHtml = `
+      <div class="booking-status-notice notice-pending">
+        <strong>🟡 Pendiente de Confirmación del Conductor</strong><br>
+        El conductor ha recibido tu solicitud de cupo. Te notificaremos en cuanto confirme tu selección.
+      </div>
+    `;
+
+    if (isAccepted) {
+      badgeClass = 'b-status-aceptada';
+      badgeText = '✅ Selección Confirmada';
+      noticeHtml = `
+        <div class="booking-status-notice notice-confirmed">
+          <strong>🟢 ¡Asiento Asegurado! Selección Confirmada por el Conductor</strong><br>
+          Tu solicitud fue aceptada. Puedes chatear directamente para afinar el punto de encuentro exacto.
+        </div>
+      `;
+    } else if (isRejected) {
+      badgeClass = 'b-status-rechazada';
+      badgeText = '❌ Solicitud No Aceptada';
+      noticeHtml = `
+        <div class="booking-status-notice notice-inactive">
+          <strong>🔴 El conductor no pudo aceptar esta solicitud</strong><br>
+          Es posible que el viaje ya no cuente con cupos suficientes. Te sugerimos buscar otra alternativa.
+        </div>
+      `;
+    } else if (isCancelled) {
+      badgeClass = 'b-status-cancelada';
+      badgeText = '⚪ Reserva Cancelada';
+      noticeHtml = `
+        <div class="booking-status-notice notice-inactive">
+          <strong>Reserva cancelada</strong> por el pasajero.
+        </div>
+      `;
+    }
+
+    const cancelBtn = (isPending || isAccepted)
+      ? `<button type="button" class="btn-cancel-my-booking" data-booking-id="${booking.id}">✕ Cancelar Reserva</button>`
+      : '';
+
+    return `
+      <article class="booking-card" data-booking-id="${booking.id}">
+        <div class="booking-top-bar">
+          <div class="booking-route-title">
+            <span>🚗</span>
+            <span>${origin} ➔ ${destination}</span>
+          </div>
+          <span class="booking-status-badge ${badgeClass}">${badgeText}</span>
+        </div>
+
+        <div class="booking-grid-info">
+          <div class="booking-info-cell">
+            <span class="b-label">Fecha y Hora</span>
+            <span class="b-val">${date} · ${time}</span>
+          </div>
+          <div class="booking-info-cell">
+            <span class="b-label">Asientos Solicitados</span>
+            <span class="b-val">${booking.cantidadCupos} ${booking.cantidadCupos === 1 ? 'cupo' : 'cupos'}</span>
+          </div>
+          <div class="booking-info-cell">
+            <span class="b-label">Total Estimado</span>
+            <span class="b-val">$${totalTarifa} USD</span>
+          </div>
+          <div class="booking-info-cell">
+            <span class="b-label">Solicitado el</span>
+            <span class="b-val">${booking.creadoEn ? new Date(booking.creadoEn).toLocaleDateString('es-SV') : 'Hoy'}</span>
+          </div>
+        </div>
+
+        ${booking.mensaje ? `<p style="font-size:0.86rem;color:#475569;font-style:italic;margin-bottom:0.9rem;">Nota enviada: “${booking.mensaje}”</p>` : ''}
+
+        ${noticeHtml}
+
+        <div class="booking-card-actions">
+          <a href="/mensajes?viajeId=${booking.viajeId}" class="btn-chat-with-driver">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Ver Mensajes del Viaje</span>
+          </a>
+          ${cancelBtn}
+        </div>
+      </article>
+    `;
+  }
+
+  // Cancelar reserva por el pasajero
+  function attachBookingListeners() {
+    document.querySelectorAll('.btn-cancel-my-booking').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const bookingId = target.getAttribute('data-booking-id');
+        if (!bookingId) return;
+
+        if (!confirm('¿Seguro que deseas cancelar esta reserva de viaje? El cupo será liberado nuevamente.')) {
+          return;
+        }
+
+        try {
+          target.innerHTML = 'Cancelando...';
+          target.setAttribute('disabled', 'true');
+
+          await solicitudesService.cancelarSolicitud(bookingId);
+
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: 'Reserva Cancelada',
+              desc: 'Has cancelado tu selección de cupo exitosamente.',
+              icon: 'ℹ️'
+            }
+          }));
+
+          await loadUserBookings();
+        } catch (err: any) {
+          console.error('Error al cancelar reserva:', err);
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: {
+              title: 'Error',
+              desc: err?.message || 'No se pudo cancelar la reserva.',
+              icon: '⚠️'
+            }
+          }));
+          target.removeAttribute('disabled');
+          target.innerHTML = '✕ Cancelar Reserva';
+        }
+      });
+    });
+  }
+
+  // Filtros de pestaña
+  tabPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      tabPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      currentFilter = pill.getAttribute('data-filter') || 'all';
+      renderFilteredBookings();
+    });
+  });
+</script>

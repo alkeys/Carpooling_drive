@@ -1,0 +1,392 @@
+---
+import RideCard, { type RideProps } from './RideCard.astro';
+import { viajesService, mapViajeToRideProps, type ViajeResponse } from '../services';
+
+// Consumo real inicial desde la API (sin datos estáticos predeterminados)
+let initialRides: RideProps[] = [];
+try {
+  const data: ViajeResponse[] = await viajesService.buscarViajes();
+  initialRides = (data || []).map(mapViajeToRideProps);
+} catch {
+  initialRides = [];
+}
+---
+
+<section class="section rides-section" id="viajes-disponibles">
+  <div class="container">
+    <!-- Section Header -->
+    <div class="section-header">
+      <span class="section-tag">Salidas Verificadas en Vivo</span>
+      <h2>Viajes disponibles directamente desde la API</h2>
+      <p>
+        Consulta en tiempo real los viajes publicados en nuestra red. Cada viaje cuenta con conductores validados y cupos asegurados.
+      </p>
+    </div>
+
+    <!-- Filter Category Tabs -->
+    <div class="category-tabs-bar">
+      <div class="tabs-group" role="tablist" aria-label="Categorías de viajes">
+        <button type="button" class="tab-btn active" data-category="all" role="tab" aria-selected="true">
+          <span>Todos los viajes</span>
+          <span class="tab-count" id="count-all">{initialRides.length}</span>
+        </button>
+        <button type="button" class="tab-btn" data-category="costa" role="tab" aria-selected="false">
+          <span>🌊 Rutas Costeras</span>
+          <span class="tab-count" id="count-costa">
+            {initialRides.filter(r => r.category === 'costa').length}
+          </span>
+        </button>
+        <button type="button" class="tab-btn" data-category="urbano" role="tab" aria-selected="false">
+          <span>⚡ Diarias / Trabajo</span>
+          <span class="tab-count" id="count-urbano">
+            {initialRides.filter(r => r.category === 'urbano').length}
+          </span>
+        </button>
+        <button type="button" class="tab-btn" data-category="interurbano" role="tab" aria-selected="false">
+          <span>🛣️ Interurbanas</span>
+          <span class="tab-count" id="count-interurbano">
+            {initialRides.filter(r => r.category === 'interurbano').length}
+          </span>
+        </button>
+      </div>
+
+      <div class="filter-status" id="filter-status-message">
+        Conectado a API v1 · {initialRides.length} viajes activos
+      </div>
+    </div>
+
+    <!-- Rides Grid (alimentado en vivo) -->
+    <div class="rides-grid" id="rides-grid-container">
+      {initialRides.map((ride) => (
+        <RideCard {...ride} />
+      ))}
+    </div>
+
+    <!-- Empty State -->
+    <div class="rides-empty-state" id="rides-empty-state" style={initialRides.length === 0 ? "display: block;" : "display: none;"}>
+      <div class="empty-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h3>No encontramos viajes activos en la API para esta búsqueda</h3>
+      <p>Sé el primero en abrir ruta hacia este destino publicando tus asientos libres o prueba con otra búsqueda.</p>
+      <div class="empty-actions">
+        <button type="button" class="btn btn-outline" id="btn-reset-filters">Ver todas las rutas activas</button>
+        <button type="button" class="btn btn-primary" id="btn-empty-publish">Publicar viaje como conductor</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .rides-section {
+    background: linear-gradient(180deg, transparent 0%, rgba(143, 214, 200, 0.08) 50%, transparent 100%);
+  }
+
+  /* Category Tabs Bar */
+  .category-tabs-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(11, 93, 103, 0.12);
+  }
+
+  .tabs-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(11, 93, 103, 0.14);
+    background: #FFFFFF;
+    color: var(--color-slate-muted);
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .tab-btn:hover {
+    color: var(--color-primary);
+    border-color: var(--color-ocean);
+  }
+
+  .tab-btn.active {
+    background-color: var(--color-primary);
+    color: #FFFFFF;
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(11, 93, 103, 0.2);
+  }
+
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 4px;
+    border-radius: var(--radius-full);
+    background: rgba(143, 214, 200, 0.35);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .tab-btn.active .tab-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #FFFFFF;
+  }
+
+  .filter-status {
+    font-size: 0.85rem;
+    color: var(--color-slate-muted);
+    font-weight: 500;
+  }
+
+  /* Grid of rides */
+  .rides-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Empty state */
+  .rides-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #FFFFFF;
+    border-radius: var(--radius-xl);
+    border: 1px dashed var(--color-seafoam);
+    max-width: 580px;
+    margin: 2rem auto;
+  }
+
+  .empty-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--color-seafoam-soft);
+    color: var(--color-ocean);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem auto;
+  }
+
+  .rides-empty-state h3 {
+    margin-bottom: 0.6rem;
+  }
+
+  .rides-empty-state p {
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 768px) {
+    .rides-grid {
+      grid-template-columns: 1fr;
+    }
+    .category-tabs-bar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<script>
+  import { 
+    viajesService, 
+    mapViajeToRideProps, 
+    generateRideCardHtml, 
+    authService, 
+    type FormattedRideCard, 
+    type ViajeResponse 
+  } from '../services';
+
+  const gridContainer = document.getElementById('rides-grid-container');
+  const emptyState = document.getElementById('rides-empty-state');
+  const statusMessage = document.getElementById('filter-status-message');
+  const resetFiltersBtn = document.getElementById('btn-reset-filters');
+  const btnEmptyPublish = document.getElementById('btn-empty-publish');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+
+  // Badge counters
+  const countAll = document.getElementById('count-all');
+  const countCosta = document.getElementById('count-costa');
+  const countUrbano = document.getElementById('count-urbano');
+  const countInterurbano = document.getElementById('count-interurbano');
+
+  let currentCategory = 'all';
+  let activeOriginFilter = '';
+  let activeDestFilter = '';
+  let cachedRides: FormattedRideCard[] = [];
+
+  // Initial client load directly from API to ensure fresh live data
+  loadRidesFromApi();
+
+  async function loadRidesFromApi(params?: { origenTexto?: string; destinoTexto?: string; fecha?: string; cuposMinimos?: number }) {
+    if (statusMessage) statusMessage.textContent = 'Consultando API de viajes en vivo...';
+
+    try {
+      const data: ViajeResponse[] = await viajesService.buscarViajes(params);
+      cachedRides = (data || []).map(mapViajeToRideProps);
+      updateTabCounters(cachedRides);
+      renderFilteredRides();
+    } catch {
+      // Si ocurre error de red o timeout, evaluar elementos en DOM
+      if (gridContainer && gridContainer.children.length > 0) {
+        if (statusMessage) statusMessage.textContent = 'Mostrando viajes disponibles';
+      } else {
+        if (emptyState) emptyState.style.display = 'block';
+        if (statusMessage) statusMessage.textContent = 'Sin conexión con el API';
+      }
+    }
+  }
+
+  function updateTabCounters(rides: FormattedRideCard[]) {
+    if (countAll) countAll.textContent = String(rides.length);
+    if (countCosta) countCosta.textContent = String(rides.filter(r => r.category === 'costa').length);
+    if (countUrbano) countUrbano.textContent = String(rides.filter(r => r.category === 'urbano').length);
+    if (countInterurbano) countInterurbano.textContent = String(rides.filter(r => r.category === 'interurbano').length);
+  }
+
+  function renderFilteredRides() {
+    if (!gridContainer) return;
+
+    let filtered = cachedRides.filter(ride => {
+      const matchCat = currentCategory === 'all' || ride.category === currentCategory;
+      const matchOrigin = !activeOriginFilter || ride.origin.toLowerCase().includes(activeOriginFilter.toLowerCase());
+      const matchDest = !activeDestFilter || ride.destination.toLowerCase().includes(activeDestFilter.toLowerCase());
+      return matchCat && (matchOrigin || matchDest);
+    });
+
+    if (filtered.length === 0) {
+      gridContainer.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'block';
+      if (statusMessage) statusMessage.textContent = '0 viajes encontrados para este criterio';
+    } else {
+      if (emptyState) emptyState.style.display = 'none';
+      gridContainer.innerHTML = filtered.map(generateRideCardHtml).join('');
+      if (statusMessage) {
+        statusMessage.textContent = `Mostrando ${filtered.length} viaje(s) verificado(s) desde API`;
+      }
+      rebindBookingButtons();
+    }
+  }
+
+  function rebindBookingButtons() {
+    // Vincular botones de reserva generados dinámicamente con el modal
+    document.querySelectorAll('.book-ride-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const rideId = target.getAttribute('data-ride-id') || '';
+        const driver = target.getAttribute('data-driver') || 'Conductor';
+        const origin = target.getAttribute('data-origin') || 'San Salvador';
+        const dest = target.getAttribute('data-dest') || 'La Libertad';
+        const time = target.getAttribute('data-time') || '07:00 AM';
+        const vehicle = target.getAttribute('data-vehicle') || 'Vehículo verificado';
+        const price = target.getAttribute('data-price') || '2.50';
+        const seats = target.getAttribute('data-seats') || '3';
+
+        const bookingDetail = { rideId, driver, origin, dest, time, vehicle, price, seats };
+
+        // REQUISITO ESTRICTO: Obligatorio iniciar sesión o registrarse antes de reservar
+        if (!authService.isAuthenticated()) {
+          try {
+            sessionStorage.setItem('pending_booking_ride', JSON.stringify(bookingDetail));
+          } catch {}
+          authService.requireAuth('reservar tu asiento en este viaje');
+          return;
+        }
+
+        window.dispatchEvent(new CustomEvent('open-booking-modal', {
+          detail: bookingDetail
+        }));
+      });
+    });
+  }
+
+
+  // Tabs events
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+
+      currentCategory = btn.getAttribute('data-category') || 'all';
+      renderFilteredRides();
+    });
+  });
+
+  // Listen to search widget event
+  window.addEventListener('filter-rides', ((event: CustomEvent) => {
+    activeOriginFilter = event.detail.origin || '';
+    activeDestFilter = event.detail.destination || '';
+
+    // Consulta la API con los filtros de búsqueda
+    loadRidesFromApi({
+      origenTexto: activeOriginFilter,
+      destinoTexto: activeDestFilter
+    });
+  }) as EventListener);
+
+  // Recarga tras publicar un nuevo viaje
+  window.addEventListener('ride-published', () => {
+    loadRidesFromApi();
+  });
+
+  resetFiltersBtn?.addEventListener('click', () => {
+    currentCategory = 'all';
+    activeOriginFilter = '';
+    activeDestFilter = '';
+
+    tabButtons.forEach(b => {
+      if (b.getAttribute('data-category') === 'all') {
+        b.classList.add('active');
+        b.setAttribute('aria-selected', 'true');
+      } else {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      }
+    });
+
+    loadRidesFromApi();
+  });
+
+  // Botón para publicar desde empty state
+  btnEmptyPublish?.addEventListener('click', () => {
+    if (!authService.requireAuth('publicar un viaje')) {
+      return;
+    }
+    const pubModal = document.getElementById('publish-modal');
+    if (pubModal) {
+      pubModal.style.display = 'flex';
+      setTimeout(() => pubModal.classList.add('show'), 10);
+      document.body.style.overflow = 'hidden';
+    }
+  });
+</script>
