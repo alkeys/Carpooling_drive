@@ -21,7 +21,11 @@ En El Salvador y la región centroamericana, miles de personas se desplazan diar
 - **Seguridad y confianza comunitaria**: Construir una red confiable basada en perfiles verificados, calificaciones bidireccionales post-viaje y comunicación directa en tiempo real mediante WebSockets.
 
 ---
-
+[![imagen.png](https://i.postimg.cc/SKjdnySc/imagen.png)](https://postimg.cc/PLsYcn8q)
+[![imagen.png](https://i.postimg.cc/SNqGWLSv/imagen.png)](https://postimg.cc/XXHFWCyf)
+[![imagen.png](https://i.postimg.cc/W4Dm2X8N/imagen.png)](https://postimg.cc/4KgHPvjq)
+[![imagen.png](https://i.postimg.cc/7Z9tCsSW/imagen.png)](https://postimg.cc/nXsGg1R4)
+[![imagen.png](https://i.postimg.cc/VLcKKQR7/imagen.png)](https://postimg.cc/YjbNSPTg)
 ## 🏗️ 2. Arquitectura de Software
 
 El backend está construido bajo el paradigma de **Monolito Modular** combinando **Arquitectura Hexagonal (Puertos y Adaptadores)** y **Vertical Slice Architecture**:
